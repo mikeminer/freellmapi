@@ -1,7 +1,15 @@
 {
   "status": "PASS_WITH_LIMITATIONS",
-  "installer_sha256": "5383feded3439ce75b20bedc884770dec35123ee286bf464536831994bf4a364",
-  "installer_size": 1092981137,
+  "installer_sha256": "b4933f39a8cd355a56926924e89b22e0dfc3f3f4f0a29d0087db9c8b508dd77d",
+  "version": "0.1.1",
+  "upgrade_from": "0.1.0",
+  "bundled_skill_registered_by_setup": true,
+  "bundled_skill_full_hashes_verified": 894,
+  "bundled_skill_version": "1.12.0",
+  "offline_skill_read_and_desktop_entry_verified": true,
+  "idempotent_registration": true,
+  "existing_config_key_sessions_custom_skill_preserved": true,
+  "installer_size": 888899440,
   "exact_exe_installed": true,
   "path_with_spaces": true,
   "no_system_python_on_test_PATH": true,
@@ -20,7 +28,15 @@
       "adb": "platform-tools-latest",
       "vcredist": "2015-2022"
     },
-    "scope": "imports only; no model, wallet or trading call"
+    "bundled_skills": [
+      {
+        "id": "devfridge-game-builder",
+        "version": "1.12.0",
+        "files": 894
+      }
+    ],
+    "bundled_registration_verified": true,
+    "scope": "offline imports, skill integrity and temporary registry; no model, wallet or trading call"
   },
   "venv_created_and_executed": true,
   "browser_local_page": true,
@@ -41,13 +57,48 @@
     "No live trading or model request was used to validate installation."
   ],
   "scratch_install_uninstalled": true,
+  "uninstall_removed_only_managed_skill_registration": true,
+  "user_data_preserved_after_uninstall": true,
   "unit_tests": {
-    "private_runtime": 52,
-    "fixture_regressions": 33,
-    "sdk_fake_transport": 14
+    "unique_cases": 114,
+    "runs": [
+      {
+        "runtime": "host Python 3.12",
+        "passed": 114,
+        "seconds": 25.288
+      },
+      {
+        "runtime": "bundled Python 3.13",
+        "passed": 114,
+        "seconds": 26.831
+      }
+    ]
   },
-  "devfridge_full_skill_bundled": false,
-  "devfridge_source": "https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder",
-  "branch": "web3-suite",
-  "source_identifiers_scrubbed": true
+  "devfridge_helper_tests_passed": 40,
+  "devfridge_helpers_scope": "Copied temporary package, included Node/Python, synthetic fixtures; no game or chain operation",
+  "bundled_skill_source_commit": "bb8668f2bf838fde3f42288cc827432c9125ad78",
+  "bundled_skill_tree_sha": "430fda812dd5ddbc73e63ad3173080b127b6eb98",
+  "bundled_skill_bytes": 8662636,
+  "skill_scripts_or_hooks_run_by_installation": false,
+  "rejected_draft_artifact": {
+    "sha256": "6439f47daadbb8e354b217c64cd61b463bd23cec073cd189dfd452796c5f27dc",
+    "published": false,
+    "missing_files": [
+      "vendor/gamedev-skills/router/SKILL.md",
+      "vendor/gamedev-skills/router/agents/openai.yaml",
+      "vendor/gamedev-skills/router/references/engine-detection.md",
+      "vendor/gamedev-skills/router/references/routing-table.md"
+    ],
+    "postinstall_registration_exit_code": 1,
+    "fix": "Anchor Inno router/prerequisites exclusions at the payload root so nested skill router folders remain included"
+  },
+  "earlier_qa_failures": [
+    {
+      "destination": "Documents-based scratch program directory",
+      "error": "Windows DeleteFile access denied (5) replacing requirements-audio.txt; also reproduced by the old 0.1.0 installer",
+      "inspection": "File was not read-only; no Restart Manager holder found; native Python rename/delete probes succeeded",
+      "resolution": "Final acceptance run used isolated LocalAppData Temp storage, like the per-user installation location",
+      "underlying_windows_denial_cause_verified": false
+    }
+  ]
 }
