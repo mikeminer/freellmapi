@@ -1,0 +1,10 @@
+{
+  "name": "freellmapi-solana-sdk",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Isolated Solana SDKs; no wallet keys or automatic signing",
+  "dependencies": {
+    "@solana/kit": "8.6.0",
+    "solana-agent-kit": "2.0.10"
+  }
+}

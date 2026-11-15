@@ -1,0 +1,4 @@
+# Install into desktop/vendor; never replace the CLI's environment.
+faster-whisper==1.2.1
+# Faster Whisper 1.2.1 uses av.open(metadata_errors=...), removed by newer PyAV.
+av==16.1.0

@@ -1,0 +1,11 @@
+/dist/
+__pycache__/
+*.pyc
+.env
+*.dpapi
+*.keystore
+/runtime-home.json
+/config.json
+/desktop/vendor/
+/desktop/models/
+**/node_modules/

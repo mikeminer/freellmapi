@@ -1,0 +1,5 @@
+PySide6==6.10.1
+markdown-it-py>=3,<5
+numpy>=1.26
+soundfile>=0.12
+truststore>=0.10

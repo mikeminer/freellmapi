@@ -2,6 +2,14 @@
 
 # FreeLLMAPI
 
+> **Web3 Suite branch:** this fork adds independent CMD, Qt desktop and Android
+> companion clients with Hyperliquid, Solana, Helius and Pump.fun integrations.
+> [English user guide](companions/web3-suite/packaging/windows/USER_GUIDE.md) ·
+> [Build the Windows installer](companions/web3-suite/packaging/windows/README.md) ·
+> [Companion releases](https://github.com/mikeminer/freellmapi/releases).
+> The official router below remains a separate, unmodified component. This
+> distribution is maintained in the `web3-suite` branch, not endorsed by upstream.
+
 **10.1 billion tokens per month.  87 free LLM providers. 1,313 free model endpoints. One OpenAI-compatible endpoint.**
 
 Aggregate free tiers from dozens of providers, plus custom OpenAI-compatible chat, embedding, image, and audio endpoints, behind a single `/v1` API. Keys are stored encrypted. A router picks the best available model for each request, falls over to the next provider when one is rate-limited, and tracks per-key usage so you stay under every free-tier cap.
