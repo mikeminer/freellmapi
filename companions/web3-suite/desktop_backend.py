@@ -141,8 +141,9 @@ class DesktopBackend:
         if area=='solana' and action in solana:return self.command(solana[action])
         if area=='game' and action in game:
             from skills_manager import Skills
-            skills=Skills(self.home);matches=[row for row in skills.list() if str(row.get('name','')).startswith('devfridge-game-builder')]
+            skills=Skills(self.home);matches=[row for row in skills.list() if str(row.get('name','')).startswith('devfridge-game-builder') and (skills.root(row['name'])/'SKILL.md').is_file()]
             if not matches:raise ValueError('DevFridge Game Builder non è installato nel profilo FREELLMAPI corrente.')
+            matches=[row for row in matches if not row.get('built_in')] or matches
             latest=max(matches,key=lambda row:(skills.path(row['name'])/'source.json').stat().st_mtime)
             return self.command('/skill use '+latest['name']+' '+game[action])
         raise ValueError('Azione non disponibile.')

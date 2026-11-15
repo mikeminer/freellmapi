@@ -69,6 +69,10 @@ def validate_payload(payload, *, probe=True):
                                 capture_output=True, text=True, encoding='utf-8', timeout=60)
         if result.returncode or 'private-runtime-ok' not in result.stdout:
             raise ValueError('Il runtime Python privato non supera la verifica delle dipendenze.')
+        import sys
+        sys.path.insert(0,str(ROOT))
+        from bundled_skills import validate
+        validate(payload)
     return {'payload':str(payload), 'icon_sizes':sorted(sizes), 'runtime_probe':probe}
 
 
@@ -89,7 +93,7 @@ def compiler(explicit=None):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--payload',required=True,type=Path)
-    parser.add_argument('--version',default='0.1.0')
+    parser.add_argument('--version',default='0.1.1')
     parser.add_argument('--iscc',type=Path)
     parser.add_argument('--check',action='store_true',help='Verifica runtime e branding senza compilare.')
     args=parser.parse_args()

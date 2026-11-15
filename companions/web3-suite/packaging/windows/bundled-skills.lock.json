@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/mikeminer/devfridge.git",
+  "commit": "bb8668f2bf838fde3f42288cc827432c9125ad78",
+  "path": "skills/devfridge-game-builder",
+  "tree_sha": "430fda812dd5ddbc73e63ad3173080b127b6eb98",
+  "expected_files": 894,
+  "version": "1.12.0"
+}

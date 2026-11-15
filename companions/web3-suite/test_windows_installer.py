@@ -1,5 +1,6 @@
 """Packaging boundary tests; no installer or fake Python binary is executed."""
 import importlib.util
+import hashlib,json
 from pathlib import Path
 import shutil
 import subprocess
@@ -21,6 +22,11 @@ class WindowsInstallerTests(unittest.TestCase):
             path=self.payload/name;path.parent.mkdir(parents=True,exist_ok=True)
             path.write_bytes(b'fixture, not executable')
         shutil.copyfile(build.ICON,self.payload/'agent/desktop/freellmapi-official.ico')
+        skill=self.payload/'skills/dgb-test/SKILL.md';skill.parent.mkdir(parents=True)
+        raw=b'Synthetic build skill';skill.write_bytes(raw)
+        (self.payload/'bundled-skills.json').write_text(json.dumps({'schema_version':1,'packages':[{
+            'id':'devfridge-game-builder','path':'skills/dgb-test',
+            'files':{'SKILL.md':{'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}}}]}))
 
     def test_official_icon_has_complete_valid_windows_resources(self):
         self.assertTrue({(16,16),(32,32),(48,48),(64,64),(256,256)}<=build.icon_sizes(build.ICON))
@@ -58,6 +64,13 @@ class WindowsInstallerTests(unittest.TestCase):
         failure=subprocess.CompletedProcess([],1,'','Missing private runtime dependency')
         with patch.object(build.subprocess,'run',return_value=failure):
             with self.assertRaisesRegex(ValueError,'runtime Python privato'):
+                build.validate_payload(self.payload)
+
+    def test_missing_bundled_support_fails_preflight(self):
+        (self.payload/'skills/dgb-test/SKILL.md').unlink()
+        success=subprocess.CompletedProcess([],0,'private-runtime-ok\n','')
+        with patch.object(build.subprocess,'run',return_value=success):
+            with self.assertRaisesRegex(ValueError,'file_set_mismatch'):
                 build.validate_payload(self.payload)
 
     def test_wrong_payload_icon_is_rejected(self):

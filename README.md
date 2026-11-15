@@ -6,7 +6,8 @@
 > companion clients with Hyperliquid, Solana, Helius and Pump.fun integrations.
 > Includes workflow support for
 > [DevFridge Game Builder](https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder)
-> for Three.js browser games and Seeker APKs (full skill installed separately).
+> for Three.js browser games and Seeker APKs. Version 0.1.1 bundles the complete
+> skill (894 files), registered automatically for CMD, Desktop and Remote.
 > [English user guide](companions/web3-suite/packaging/windows/USER_GUIDE.md) ·
 > [Build the Windows installer](companions/web3-suite/packaging/windows/README.md) ·
 > [Companion releases](https://github.com/mikeminer/freellmapi/releases).

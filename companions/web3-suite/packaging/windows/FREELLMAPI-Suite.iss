@@ -3,7 +3,7 @@
   #error PayloadRoot must point to a validated, self-contained suite payload.
 #endif
 #ifndef SuiteVersion
-  #define SuiteVersion "0.1.0"
+  #define SuiteVersion "0.1.1"
 #endif
 
 [Setup]
@@ -22,7 +22,8 @@ SetupIconFile=..\..\desktop\freellmapi-official.ico
 UninstallDisplayIcon={app}\assets\freellmapi.ico
 OutputDir=..\..\dist\windows
 OutputBaseFilename=FREELLMAPI-Web3-Suite-Setup-{#SuiteVersion}
-Compression=lzma2/fast
+Compression=lzma2/normal
+LZMANumBlockThreads=4
 SolidCompression=yes
 WizardStyle=modern
 DisableProgramGroupPage=yes
@@ -42,7 +43,7 @@ Name: "full"; Description: "Full Web3 Suite"
 Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
-Name: "core"; Description: "Private Python runtime, CMD, Desktop, Web3 SDKs and Android APK"; Types: full custom; Flags: fixed
+Name: "core"; Description: "Private Python, CMD, Desktop, Web3 SDKs, full DevFridge skill and Android APK"; Types: full custom; Flags: fixed
 Name: "router"; Description: "Official FreeLLMAPI router"; Types: full
 Name: "tailscale"; Description: "Tailscale private networking (requires Windows administrator approval)"; Types: full
 
@@ -65,8 +66,12 @@ Name: "{group}\English user guide"; Filename: "{app}\docs\USER_GUIDE.html"; Icon
 
 [Run]
 Filename: "{app}\prerequisites\vc_redist.x64.exe"; Parameters: "/install /passive /norestart"; Verb: "runas"; Flags: shellexec waituntilterminated; Check: NeedsVisualCpp
+Filename: "{app}\runtime\python\python.exe"; Parameters: "-I -X utf8 ""{app}\launcher\suite.py"" register-skills"; Flags: runhidden waituntilterminated; Components: core
 Filename: "{sys}\msiexec.exe"; Parameters: "/i ""{app}\prerequisites\tailscale.msi"" /passive /norestart"; Verb: "runas"; Flags: shellexec waituntilterminated; Components: tailscale; Check: NeedsTailscale
 Filename: "{app}\runtime\python\pythonw.exe"; Parameters: "-I -X utf8 ""{app}\launcher\suite.py"" setup"; Description: "Configure provider accounts, Tailscale and memory"; Flags: postinstall nowait skipifsilent
+
+[UninstallRun]
+Filename: "{app}\runtime\python\python.exe"; Parameters: "-I -X utf8 ""{app}\launcher\suite.py"" unregister-skills"; Flags: runhidden waituntilterminated; RunOnceId: "freellmapi-bundled-skill-registry"
 
 [Code]
 function NeedsVisualCpp: Boolean;

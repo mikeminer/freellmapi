@@ -25,16 +25,32 @@ def configure(root):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('mode',choices=('desktop','cmd','setup','router','mobile','doctor'))
+    parser.add_argument('mode',choices=('desktop','cmd','setup','router','mobile','doctor','register-skills','unregister-skills'))
     args,extra=parser.parse_known_args()
     root=configure(Path(__file__).resolve().parents[1])
+    if args.mode in ('register-skills','unregister-skills'):
+        from app_home import default_home
+        from bundled_skills import register,unregister
+        value=register(default_home(),root) if args.mode=='register-skills' else unregister(default_home(),root)
+        print(json.dumps(value));return 0
     if args.mode=='doctor':
         import importlib
         for name in ('freellmapi','desktop_backend','PySide6.QtWebEngineWidgets','win32api','solders','faster_whisper'):
             importlib.import_module(name)
         versions=json.loads((root/'suite-manifest.json').read_text(encoding='utf-8'))['components']
+        from bundled_skills import validate
+        import tempfile
+        from skills_manager import Skills
+        bundle=validate(root)
+        with tempfile.TemporaryDirectory(prefix='freellmapi-builtin-doctor-') as temporary:
+            manager=Skills(temporary);registered=manager.list()
+            for row in registered:
+                manager.read(row['name'])
+                manager.read_file(row['name'],'references/seeker-android.md')
         print(json.dumps({'ok':True,'python':sys.version.split()[0],'private_prefix':str(Path(sys.prefix).resolve())==str(root/'runtime/python'),
-                          'components':{k:v['version'] for k,v in versions.items()},'scope':'imports only; no model, wallet or trading call'}))
+                          'components':{k:v['version'] for k,v in versions.items()},
+                          'bundled_skills':[{'id':p['id'],'version':p['version'],'files':len(p['files'])} for p in bundle['packages']],
+                          'bundled_registration_verified':bool(registered),'scope':'offline imports, skill integrity and temporary registry; no model, wallet or trading call'}))
         return 0
     if args.mode=='router':
         subprocess.Popen([str(root/'router/FreeLLMAPI.exe')],cwd=root/'router')

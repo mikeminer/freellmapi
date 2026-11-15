@@ -4,8 +4,12 @@ Independent CMD, Qt desktop and Android companion clients with Hyperliquid, Sola
 
 Also supports [DevFridge Game Builder](https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder)
 for Three.js browser games, Seeker APKs and optional Solana wallet/subscription
-integration. Install the full skill package with its references and assets as
-described in the English guide; the desktop entry point is already included.
+integration. Setup 0.1.1 includes the complete skill version 1.12.0 with all 894
+files, including references, assets, scripts and vendored workflows. It registers
+automatically for CMD, Desktop and the shared Android coordinator. No separate
+clone or skill download is needed. Original licenses are retained.
+
+[Download Setup 0.1.1](https://github.com/mikeminer/freellmapi/releases/tag/web3-suite-v0.1.1).
 
 [English user guide](packaging/windows/USER_GUIDE.md) · [Build and verification](packaging/windows/README.md)
 

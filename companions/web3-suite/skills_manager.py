@@ -23,7 +23,10 @@ def source_url(url):
     return url
 
 class Skills:
-    def __init__(self,home): self.home=Path(home)/'skills'
+    def __init__(self,home):
+        self.home=Path(home)/'skills'
+        from bundled_skills import register
+        self.bundled=register(home)
     def contains(self,path):
         roots=[self.home.resolve()]
         # Windows packaged apps can redirect rename operations into their per-app
@@ -65,10 +68,16 @@ class Skills:
         return text[max(0,offset):max(0,offset)+24000]
     def discover(self,query):
         roots=[Path.home()/'.codex/skills',Path.home()/'.agents/skills',self.home]
-        words=query.lower().replace('-',' ').split(); found=[]
+        words=query.lower().replace('-',' ').split(); found=[];seen=set()
+        for row in self.list():
+            p=self.root(row['name'])/'SKILL.md'
+            if not p.is_file() or p.is_symlink():continue
+            text=p.read_text(encoding='utf-8')[:2000]
+            if all(w in (row['name']+' '+text).lower().replace('-',' ') for w in words):
+                found.append({'name':row['name'],'path':str(p),'preview':text[:600]});seen.add(str(p.resolve()))
         for root in roots:
             for p in root.glob('*/SKILL.md'):
-                if p.is_symlink(): continue
+                if p.is_symlink() or str(p.resolve()) in seen: continue
                 text=p.read_text(encoding='utf-8')[:2000]
                 haystack=(p.parent.name+' '+text).lower().replace('-',' ')
                 if all(w in haystack for w in words): found.append({'name':p.parent.name,'path':str(p),'preview':text[:600]})

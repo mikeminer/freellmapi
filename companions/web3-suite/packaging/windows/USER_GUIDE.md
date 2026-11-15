@@ -32,7 +32,7 @@ Installing the suite does not connect a wallet or authorize a real trade.
 
 ## Install on a new Windows PC
 
-1. Download `FREELLMAPI-Web3-Suite-Setup-0.1.0.exe` and `SHA256SUMS.txt`
+1. Download `FREELLMAPI-Web3-Suite-Setup-0.1.1.exe` and `SHA256SUMS.txt`
    from this fork's release. Compare the checksum with `Get-FileHash`.
 2. Run the installer. Full installation includes the router and Tailscale;
    choose Custom to reuse an existing router or VPN installation. Tailscale
@@ -150,24 +150,22 @@ by installing the software.
 
 ## DevFridge Game Builder
 
-The desktop's DevFridge section starts/resumes game projects and requests
-visual improvements or APK delivery. Install the complete skill package once;
-it is not bundled into this installer as a single standalone SKILL.md file.
-Its references, assets and vendored workflows are required as well.
+**The complete skill is included and registered automatically.** Version 1.12.0
+ships with all 894 files: SKILL.md, references, assets, scripts, hidden workflow
+configuration and vendored knowledge, including their license notices. No clone,
+manual skill registration or skill download is needed after installation.
 
-Using the bundled Git (adjust the suite path if you chose a custom directory):
-
-```bat
-"%LOCALAPPDATA%\Programs\FREELLMAPI Web3 Suite\runtime\git\cmd\git.exe" clone --depth 1 https://github.com/mikeminer/devfridge.git "%USERPROFILE%\Documents\DevFridgeSkills"
-```
-
-Inside FREELLMAPI, register that local skill folder:
+Open the desktop's DevFridge section to start/resume a game, improve graphics
+or deliver an APK. In CMD or the connected Android app, write for example:
 
 ```text
-/skill link C:\Users\<you>\Documents\DevFridgeSkills\skills\devfridge-game-builder
+Usa DevFridge Game Builder per creare un gioco Three.js per browser e Seeker.
 ```
 
-Then request a game in chat or use the DevFridge desktop section. The workflow
+The skill is available offline in the PC's shared skill catalog; cloud model
+responses still require a configured, available provider. Android uses the
+same PC coordinator and registered package rather than a second phone copy.
+The workflow
 supports browser, Seeker APK or both; touch input, Three.js/GLB/PBR assets,
 optional SOL subscription passes and release verification. Reuse decisions
 already confirmed in that game session. APK compilation needs an Android
@@ -176,6 +174,19 @@ development tools are separate from the bundled ADB installation tool.
 Publishing games or spending SOL requires the owner's actual authorization;
 installing/loading the skill does neither. Physical Seeker tests remain
 distinct from desktop/emulator checks.
+
+The source is pinned to
+[DevFridge commit bb8668f](https://github.com/mikeminer/devfridge/tree/bb8668f2bf838fde3f42288cc827432c9125ad78/skills/devfridge-game-builder),
+tree `430fda812dd5ddbc73e63ad3173080b127b6eb98`.
+`bundled-skills.json` records every original file's size and SHA-256. The
+launcher verifies the complete package and only writes managed skill metadata;
+installation does not execute its scripts or hooks. Existing manually linked
+DevFridge packages remain preferred in the desktop panel. Custom skills,
+conversation data and credentials are preserved on upgrade and uninstall.
+The bundled package stays in the program's `skills` directory; uninstall removes
+only its own registration. The DevFridge repository's Business Source License
+1.1 and the vendored projects' own licenses are retained; see the installed
+`licenses/DevFridge-BUSL-1.1.txt` and the package's vendor directories.
 
 ## Storage, updates and removal
 

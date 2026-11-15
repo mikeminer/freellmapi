@@ -51,11 +51,14 @@ def main():
                           (ROOT/'mobile/build/freellmapi-remote.apk',OUT/'mobile/freellmapi-remote.apk'),
                           (HERE/'USER_GUIDE.md',OUT/'docs/USER_GUIDE.md')):
         target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+    from stage_skills import stage
+    bundled=stage(payload=OUT)
     # Console command is available in every CMD launched with the suite's bin
     # on PATH. The installer registers this directory for the current user.
     (OUT/'bin').mkdir(exist_ok=True)
     (OUT/'bin/freellmapi.cmd').write_text('@echo off\n"%~dp0..\\runtime\\python\\python.exe" -I -X utf8 "%~dp0..\\launcher\\suite.py" cmd %*\nexit /b %errorlevel%\n')
-    (OUT/'suite-manifest.json').write_text(json.dumps({'version':'0.1.0','specialization':'Web3: Hyperliquid, Solana, Helius, Pump.fun',
+    (OUT/'suite-manifest.json').write_text(json.dumps({'version':'0.1.1','specialization':'Web3: Hyperliquid, Solana, Helius, Pump.fun, DevFridge Game Builder',
+                                                    'bundled_skills':[{'id':p['id'],'version':p['version'],'files':len(p['files']),'source_commit':p['source_commit']} for p in bundled['packages']],
                                                     'components':lock['components'],'apk_sha256':hashlib.sha256((OUT/'mobile/freellmapi-remote.apk').read_bytes()).hexdigest()},indent=2))
     subprocess.run([str(OUT/'runtime/python/python.exe'),'-I','-c',
                     "import sys,pathlib;from markdown_it import MarkdownIt;p=pathlib.Path(sys.argv[1]);p.with_suffix('.html').write_text('<!doctype html><meta charset=utf-8><title>FREELLMAPI Web3 Suite</title><style>body{max-width:900px;margin:40px auto;padding:20px;font:17px/1.6 system-ui;color:#202630}pre{white-space:pre-wrap;background:#eee;padding:15px}a{color:#2864ce}</style>'+MarkdownIt('commonmark',{'html':False}).render(p.read_text(encoding='utf-8')),encoding='utf-8')",
