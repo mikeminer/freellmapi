@@ -1,0 +1,53 @@
+{
+  "status": "PASS_WITH_LIMITATIONS",
+  "installer_sha256": "5383feded3439ce75b20bedc884770dec35123ee286bf464536831994bf4a364",
+  "installer_size": 1092981137,
+  "exact_exe_installed": true,
+  "path_with_spaces": true,
+  "no_system_python_on_test_PATH": true,
+  "doctor": {
+    "ok": true,
+    "python": "3.13.17",
+    "private_prefix": true,
+    "components": {
+      "python": "3.13.17",
+      "router": "v0.16.30",
+      "tailscale": "1.104.7",
+      "inno": "is-7_1_1",
+      "node": "v22.23.5",
+      "powershell": "v7.7.0",
+      "git": "v2.56.1.windows.1",
+      "adb": "platform-tools-latest",
+      "vcredist": "2015-2022"
+    },
+    "scope": "imports only; no model, wallet or trading call"
+  },
+  "venv_created_and_executed": true,
+  "browser_local_page": true,
+  "desktop_synthetic_fixture_started": true,
+  "sdk_tests_passed": 14,
+  "real_orders_requested": 0,
+  "real_wallet_keys_read": false,
+  "real_model_calls": 0,
+  "tailscale_reinstalled": false,
+  "router_started": false,
+  "clean_vm_tested": false,
+  "physical_android_tested_this_run": false,
+  "installer_code_signed": false,
+  "limits": [
+    "Build-machine isolated install, not a clean Windows VM.",
+    "Tailscale login/provider onboarding and physical Android pairing require personal interactive steps.",
+    "Desktop screenshot uses a synthetic fixture.",
+    "No live trading or model request was used to validate installation."
+  ],
+  "scratch_install_uninstalled": true,
+  "unit_tests": {
+    "private_runtime": 52,
+    "fixture_regressions": 33,
+    "sdk_fake_transport": 14
+  },
+  "devfridge_full_skill_bundled": false,
+  "devfridge_source": "https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder",
+  "branch": "web3-suite",
+  "source_identifiers_scrubbed": true
+}

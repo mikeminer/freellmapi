@@ -4,6 +4,9 @@
 
 > **Web3 Suite branch:** this fork adds independent CMD, Qt desktop and Android
 > companion clients with Hyperliquid, Solana, Helius and Pump.fun integrations.
+> Includes workflow support for
+> [DevFridge Game Builder](https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder)
+> for Three.js browser games and Seeker APKs (full skill installed separately).
 > [English user guide](companions/web3-suite/packaging/windows/USER_GUIDE.md) ·
 > [Build the Windows installer](companions/web3-suite/packaging/windows/README.md) ·
 > [Companion releases](https://github.com/mikeminer/freellmapi/releases).

@@ -7,6 +7,11 @@ unmodified official FreeLLMAPI router. The router aggregates provider APIs;
 the companion agent supplies tools, persistent conversations and Web3
 integrations. This fork is not an official upstream product endorsement.
 
+The desktop also provides the **DevFridge Game Builder** workflow for Three.js
+browser games and Seeker APKs, with Solana wallet/payment integration where
+selected by the game owner. Skill source and supporting assets/references:
+https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder
+
 ## What is included
 
 The Windows x64 installer includes a private Python runtime and its libraries,
@@ -117,6 +122,35 @@ before signing. Bonding-curve and PumpSwap AMM operations use different SDK
 paths. Slippage, fees, liquidity and transaction confirmation matter. There
 is no guaranteed return, rug-pull protection or background trading enabled
 by installing the software.
+
+## DevFridge Game Builder
+
+The desktop's DevFridge section starts/resumes game projects and requests
+visual improvements or APK delivery. Install the complete skill package once;
+it is not bundled into this installer as a single standalone SKILL.md file.
+Its references, assets and vendored workflows are required as well.
+
+Using the bundled Git (adjust the suite path if you chose a custom directory):
+
+```bat
+"%LOCALAPPDATA%\Programs\FREELLMAPI Web3 Suite\runtime\git\cmd\git.exe" clone --depth 1 https://github.com/mikeminer/devfridge.git "%USERPROFILE%\Documents\DevFridgeSkills"
+```
+
+Inside FREELLMAPI, register that local skill folder:
+
+```text
+/skill link C:\Users\<you>\Documents\DevFridgeSkills\skills\devfridge-game-builder
+```
+
+Then request a game in chat or use the DevFridge desktop section. The workflow
+supports browser, Seeker APK or both; touch input, Three.js/GLB/PBR assets,
+optional SOL subscription passes and release verification. Reuse decisions
+already confirmed in that game session. APK compilation needs an Android
+build SDK and JDK; original Blender asset generation needs Blender. These
+development tools are separate from the bundled ADB installation tool.
+Publishing games or spending SOL requires the owner's actual authorization;
+installing/loading the skill does neither. Physical Seeker tests remain
+distinct from desktop/emulator checks.
 
 ## Storage, updates and removal
 
