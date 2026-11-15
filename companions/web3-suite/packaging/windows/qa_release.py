@@ -1,5 +1,5 @@
 """Exercise the actual installer in scratch space; never open personal accounts."""
-import argparse,hashlib,json,os,subprocess,sys,time
+import argparse,hashlib,json,os,subprocess,sys,tempfile,time
 from pathlib import Path
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
 
@@ -13,9 +13,13 @@ def main():
     parser.add_argument('--version',default='0.1.1')
     parser.add_argument('--upgrade-from',default='0.1.0')
     args=parser.parse_args()
-    QA=ROOT/('dist/qa-'+args.version);INSTALL=QA/'installed suite with spaces';RESULTS=QA/'results.json'
+    QA=ROOT/('dist/qa-'+args.version)
+    # Use local application storage, like the actual per-user installation.
+    # Documents may apply additional app/file-protection rules to .txt updates.
+    install_base=Path(tempfile.gettempdir())/('freellmapi-suite-qa-'+args.version)
+    INSTALL=install_base/'installed suite with spaces';RESULTS=QA/'results.json'
     QA.mkdir(parents=True,exist_ok=True)
-    assert INSTALL.resolve().is_relative_to(QA.resolve())
+    assert INSTALL.resolve().is_relative_to(install_base.resolve())
     import winreg
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\freellmapi.agent.suite_is1') as key:

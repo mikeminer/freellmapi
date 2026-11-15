@@ -48,7 +48,7 @@ Name: "router"; Description: "Official FreeLLMAPI router"; Types: full
 Name: "tailscale"; Description: "Tailscale private networking (requires Windows administrator approval)"; Types: full
 
 [Files]
-Source: "{#PayloadRoot}\*"; Excludes: "router\*,prerequisites\*,__pycache__,.links,__dirlock"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
+Source: "{#PayloadRoot}\*"; Excludes: "\router\*,\prerequisites\*,__pycache__,.links,__dirlock"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: core
 Source: "{#PayloadRoot}\router\*"; DestDir: "{app}\router"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: router
 Source: "{#PayloadRoot}\prerequisites\tailscale.msi"; DestDir: "{app}\prerequisites"; Flags: ignoreversion; Components: tailscale
 Source: "{#PayloadRoot}\prerequisites\vc_redist.x64.exe"; DestDir: "{app}\prerequisites"; Flags: ignoreversion; Components: core
