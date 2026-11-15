@@ -57,6 +57,31 @@ Provider accounts, Tailscale login and wallet credentials are personal setup
 steps. They are not supplied by this installer. Paid services are not enabled
 automatically. Free tiers retain their own limits and terms.
 
+## Everyday use
+
+Start a new CMD and type `freellmapi`, or use the desktop shortcut. On an
+already-open terminal, reopen it after installation to receive the PATH update.
+Choose a new or saved session. Use the model picker to select an individual
+model or a server routing mode; the requested and effective model can differ
+when the server uses fallback. Keep the same session selected across clients.
+
+| CMD command | Purpose |
+| --- | --- |
+| `/menu` and `/help` | Available tools, panels and shortcuts |
+| `/model` | Keyboard model picker; arrows and Enter select |
+| `/new` / `/resume` | Start a conversation / choose an existing one |
+| `/plan` / `/ask` | Planning / confirmation before supported actions |
+| `/auto on` / `/auto off` | Enable / disable automatic tool approval and continuation |
+| `/vault` / `/memory query` | Memory configuration / explicit memory lookup |
+| `/skills` | Installed skills and their registered names |
+| `/remote start` / `/remote pair` | Remote connection / fresh pairing code |
+
+Automatic approval allows software changes and commands without per-action
+confirmation; enable it intentionally. Closing a client does not necessarily
+stop a coordinator or an already accepted background task. For a financial
+request, consult its exact native receipt and existing exchange IDs when an
+outcome is uncertain, rather than issuing the same request again.
+
 ## Android / Seeker
 
 Install Tailscale on Android and sign in with the same owner account as the
