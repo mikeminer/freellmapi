@@ -31,6 +31,9 @@ SPECS=[
  ('hyperliquid_operations','Read HISTORICAL receipts. id is the local 24-hex receipt ID; a recorded 0x + 32-hex client ID is resolved read-only when unique, including TP/SL legs. Never guess IDs. Omit id to list valid local IDs. accepted/filled is historical execution, not proof of an open position. Reconciliation only reads exchange status; never submits or replaces an order.',{'id':'string','profile':'string'},[]),
  ('hyperliquid_select','Select an existing saved Hyperliquid profile by name (mainnet/testnet/account/vault). Does not grant trading rights or change an existing automation scope.',{'profile':'string'},['profile']),
 ]
+SPECS.append(('hyperliquid_propose_plan',
+ 'Present a complete typed trade proposal with native choices: Conferma invio / Aggiorna analisi / Annulla, plus free text. Use when showing a trade preview or asking whether to execute. Same plan and sibling options as execute_plan. Nothing is sent unless the user explicitly selects Conferma invio; then the exact plan goes through the existing OMS once. Read-only/plan requests stay read-only. No keys.',
+ {'profile':'string','plan':'string','order_kind':'string','slippage_bps':'integer','bracket_slippage_bps':'integer'},['plan','order_kind','bracket_slippage_bps']))
 NAMES={s[0] for s in SPECS}
 # HOLD is an explicit no-order decision in the same durable protocol.
 for _index,(_name,_description,_properties,_required) in enumerate(SPECS):
@@ -336,6 +339,18 @@ def normalize_action(p,a):
             price=mid*(1+Decimal(slip)/10000*(1 if a['side']=='buy' else -1))
             tick=Decimal(10)**max(-max(0,6-decimals),price.adjusted()-4)
             price=price.quantize(tick,rounding=ROUND_DOWN if a['side']=='buy' else ROUND_UP);tif='Ioc'
+            if 'entry_reference' in a:
+                reference=number(a['entry_reference'],'entry del piano')
+                bound=reference*(1+Decimal(slip)/10000*(1 if a['side']=='buy' else -1))
+                bound_tick=Decimal(10)**max(-max(0,6-decimals),bound.adjusted()-4)
+                bound=bound.quantize(bound_tick,rounding=ROUND_DOWN if a['side']=='buy' else ROUND_UP)
+                if (mid>bound if a['side']=='buy' else mid<bound):
+                    problem('plan_price_moved','Prezzo corrente oltre lo slippage totale dell’entry del piano: nessun invio.',
+                            requested_entry=textnum(reference),observed_mid=textnum(mid),entry_limit=textnum(bound),slippage_bps=slip)
+                # Both constraints apply to the SAME signed limit. Applying a
+                # full second allowance to the new mid rejected tiny moves.
+                price=min(price,bound) if a['side']=='buy' else max(price,bound)
+                b['entry_bound']={'reference':textnum(reference),'max_slippage_bps':slip,'limit':textnum(bound)}
             if 'trigger_reference' in a or 'trigger_max_gap_bps' in a:
                 reference=number(a.get('trigger_reference'),'trigger reference');gap=a.get('trigger_max_gap_bps')
                 if type(gap) is not int or not 1<=gap<=1000:problem('trigger_bound_invalid','Limite nativo gap del trigger non valido.')
@@ -945,6 +960,9 @@ def dispatch(agent,name,a,home):
             from hyperliquid_execution import execute
             from freellmapi import output
             return execute(agent,home,a,output)
+        if name=='hyperliquid_propose_plan':
+            from trade_proposal import propose
+            return propose(agent,home,a)
         if name=='hyperliquid_panel':return panel(agent,home)
         if name=='hyperliquid_monitor':
             import trading_service
@@ -993,7 +1011,7 @@ def dispatch(agent,name,a,home):
     except HLProblem as exc:
         if getattr(agent,'hyperliquid_controller',None) and exc.code in ('loss_stop','outcome_unknown','auto_scope','agent_unauthorized','existing_leverage_cap','leverage_unverified','leverage_preflight_locked'):stop(home,agent.hyperliquid_controller)
         result={'ok':False,'code':exc.code,'message':str(exc),'sent':False,'recovery':'Correggi il prerequisito indicato; non sostituire rete, target o ordini e non riprovare invariato.',**exc.details}
-        if name=='hyperliquid_execute_plan':result['terminal']=True
+        if name in ('hyperliquid_execute_plan','hyperliquid_propose_plan'):result['terminal']=True
         if exc.code=='profile_missing':result['recovery_tools']=[{'name':'hyperliquid_status','arguments':{}}]
         elif exc.code=='size_unit_mismatch':result['recovery_tools']=[{'name':'ask_user','arguments':{'question':exc.details['question'],'options':exc.details['options']}}]
         elif exc.code in ('protection_required','bracket_invalid','slippage_required','order_fields_invalid','bracket_direction','leverage_action_required','request_coin_mismatch','unified_margin_cap','asset_size_cap','financial_snapshot_required'):

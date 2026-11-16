@@ -10,7 +10,7 @@ from market_routing import intent
 from session_store import Sessions
 from test_hyperliquid_leverage import LeverageFixture
 
-PROMPT='trovami il migliore trade su hyperliquid. usa metà del capitale'
+PROMPT='trovami il migliore trade su hyperliquid ed eseguilo. usa metà del capitale'
 
 
 class SeekerLatestSessionTests(unittest.TestCase):

@@ -20,6 +20,14 @@ def require_bracket(body,client_ids=False):
                   recovery_coin=body.get('coin'),recovery_profile=body.get('profile'),required_fields=['take_profit','stop_loss','bracket_slippage_bps'])
     tp=h.number(bracket['take_profit'],'take_profit');sl=h.number(bracket['stop_loss'],'stop_loss')
     price=h.number(body.get('price'),'entry price')
+    entry=body.get('entry_bound')
+    if entry:
+        slip=entry.get('max_slippage_bps')
+        if type(slip) is not int or not 1<=slip<=1000:h.problem('entry_bound_invalid','Limite slippage del piano non valido.')
+        bound=h.number(entry.get('reference'),'entry reference')*(1+Decimal(slip)/10000*(1 if body.get('side')=='buy' else -1))
+        limit=h.number(entry.get('limit'),'entry limit')
+        if (price>min(limit,bound) if body.get('side')=='buy' else price<max(limit,bound)):
+            h.problem('plan_price_moved','Prezzo firmato oltre il limite totale del piano: nessun invio.')
     bound=body.get('trigger_bound')
     if bound:
         limit=h.number(bound.get('limit'),'trigger limit')

@@ -1066,6 +1066,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
         self.operational_rules=active_rules['settings'];self.operational_version=active_rules['id'];self.operational_tool_errors=0
         self.turn_outcome='running'
         self.financial_turn_started_at=time.time()
+        self.financial_turn_retry=retry
         self.current_market_request=None
         self.current_account_state=None
         self.key_only_plan=None
@@ -1196,7 +1197,9 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             self.messages.append({'role':'tool','tool_call_id':ident,'content':str(discovered)}); self.save()
             output('Consultate risorse del server MCP già connesso: '+server)
         from market_routing import intent as market_intent
-        native_market=market_intent(prompt,self.messages) if not self.depth else None
+        from financial_confirmation import resolve as resolve_financial_confirmation
+        financial_confirmation=resolve_financial_confirmation(self,prompt,HOME) if not self.depth else None
+        native_market=financial_confirmation or (market_intent(prompt,self.messages) if not self.depth else None)
         if self.auto_skills and not retry and not editorial and not native_market and not getattr(self,'hyperliquid_controller',None):
             self.skill_discovery=''
             try: self.skill_router.run(self,prompt,output)
@@ -1204,14 +1207,14 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             except RateLimited: output('Selezione skill sospesa per quota API. Proseguo con gli strumenti nativi e il recupero del routing.')
             except Exception as e: output('Selezione automatica skill non riuscita; proseguo con gli strumenti disponibili. '+str(e)[:250])
         from market_routing import intent as market_intent,collect as collect_market,response_issue as market_response_issue,context_note as market_context_note,fallback as market_fallback,has_data as has_market_data
-        market_request=market_intent(prompt,self.messages) if not self.depth and not getattr(self,'hyperliquid_controller',None) else None
+        market_request=dict(native_market) if native_market and not self.depth and not getattr(self,'hyperliquid_controller',None) else None
         self.current_market_request=market_request
         if market_request:
             from financial_completion import requirement
-            market_request['execution_action']=requirement(prompt,market_request)
+            market_request['execution_action']='order' if financial_confirmation else requirement(prompt,market_request)
             if market_request['execution_action'] in ('order','leverage','cancel','watch') and self.mode!='plan':
                 from hyperliquid_execution import bind_request
-                bind_request(self,retry)
+                bind_request(self,retry,confirmation=financial_confirmation)
         elif self.mode!='plan' and re.search(r'\b(?:hyperliquid|hypercore)\b',prompt,re.I):
             from financial_completion import requirement
             if requirement(prompt,{'venue':'hyperliquid'}) in ('order','leverage','cancel','watch'):
@@ -1227,6 +1230,8 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             output(execution_blocker);self.messages.append({'role':'assistant','content':execution_blocker});self.save();self.turn_outcome='incomplete';return
         market_repairs=0
         financial_plan_repairs=0
+        trade_proposal_repairs=0
+        trade_proposal_required=False
         checkpoint_answer_only=False
         checkpoint_answer_attempted=False
         import current_information
@@ -1302,6 +1307,8 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 payload['tool_choice']='none'
             if checkpoint_answer_only:
                 payload['tools']=[];payload['tool_choice']='none'
+            if trade_proposal_required:
+                payload['tool_choice']={'type':'function','function':{'name':'hyperliquid_propose_plan'}}
                 payload['messages'].append({'role':'system','content':'Optional memory consolidation is suspended. Complete ONLY the latest read-only market analysis from the native evidence already obtained. No further tools, checkpoints, orders or invented current state. Explain observed regimes, uncertainty and missing evidence. A memory error does not erase the successful market reads.'})
             if getattr(self,'hyperliquid_controller',None):
                 import hyperliquid_tools
@@ -1399,6 +1406,14 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             ui.response_info(self.model, response, self.last_request)
             message = reliable_runtime.validate_message(response['choices'][0]['message'])
             message = {k:v for k,v in message.items() if k in ('role','content','tool_calls','reasoning_content')}
+            if trade_proposal_required:
+                trade_proposal_required=False
+                proposals=[c for c in message.get('tool_calls',[]) if c.get('function',{}).get('name') in ('hyperliquid_propose_plan','hyperliquid_execute_plan')]
+                if not proposals:
+                    text='Proposta interattiva non prodotta dal modello. Nessun ordine inviato; sessione e analisi conservate.'
+                    self.messages.append({'role':'assistant','content':text});self.save();output(text);self.turn_outcome='incomplete';return
+                proposals[0]['function']['name']='hyperliquid_propose_plan'
+                message['tool_calls']=proposals[:1];message['content']=None
             if checkpoint_answer_only and (message.get('tool_calls') or not str(message.get('content') or '').strip()):
                 # Providers may ignore tool_choice=none. Never execute a proposed
                 # action in this final, bounded read-only synthesis.
@@ -1410,6 +1425,23 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 if choice:
                     message={'role':'assistant','content':None,'tool_calls':[{'id':'local_choice_'+uuid.uuid4().hex,'type':'function','function':{'name':'ask_user','arguments':json.dumps(choice,ensure_ascii=False)}}]}
             calls=message.get('tool_calls',[])
+            if market_request and market_request.get('venue')=='hyperliquid' and not getattr(self,'hyperliquid_controller',None):
+                from trade_proposal import asks_confirmation
+                if asks_confirmation(message):
+                    for call in calls:
+                        if call.get('function',{}).get('name')=='hyperliquid_execute_plan':call['function']['name']='hyperliquid_propose_plan'
+                    if not calls and not trade_proposal_repairs:
+                        trade_proposal_repairs+=1
+                        trade_proposal_required=True
+                        self.messages.append({'role':'assistant','content':message.get('content')})
+                        self.messages.append({'role':'system','content':'Trade confirmation must use buttons/arrows, not a prose yes/no question. Present the SAME complete proposal with hyperliquid_propose_plan (typed plan JSON string and explicit execution options). It shows the native choices and requires the actual user selection before any send. Do not change the proposed financial parameters.'})
+                        self.save();continue
+                    proposals=[c for c in calls if c.get('function',{}).get('name')=='hyperliquid_propose_plan']
+                    if proposals:message['tool_calls']=calls=proposals[:1]
+                if any(c.get('function',{}).get('name')=='hyperliquid_propose_plan' for c in calls):
+                    # The native typed proposal renders the choice itself.
+                    # Do not route its prose question through generic repair.
+                    message['content']=None
             if getattr(self,'hyperliquid_controller',None) and not calls:
                 import hyperliquid_tools
                 from types import SimpleNamespace
@@ -1660,7 +1692,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                     try: delivery_proof_satisfied=bool(json.loads(result).get('complete'))
                     except (ValueError,AttributeError): pass
                 self.save() # One tool result is durable before the next tool is attempted.
-                terminal_compound=(function['name']=='hyperliquid_execute_plan' and any(e['tool']=='hyperliquid_execute_plan' and isinstance(e['result'],dict) and e['result'].get('terminal') for e in market_evidence))
+                terminal_compound=(function['name']=='hyperliquid_propose_plan' or (function['name']=='hyperliquid_execute_plan' and any(e['tool']=='hyperliquid_execute_plan' and isinstance(e['result'],dict) and e['result'].get('terminal') for e in market_evidence)))
                 if terminal_compound:
                     for skipped in calls[call_index+1:]:
                         self.messages.append({'role':'tool','tool_call_id':skipped['id'],'content':json.dumps({'ok':False,'code':'batch_closed_after_execution_result','sent':False,'instruction':'Non eseguito: il risultato finanziario precedente chiude questo tentativo. Nessun secondo invio o piano sostitutivo.'})})
@@ -1694,7 +1726,11 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                     output('Recupero modifica: riletto '+path+'. Il modello deve usare il contenuto attuale.')
                 except OSError: pass
             self.save()
-            terminal_execution=any(e['tool']=='hyperliquid_execute_plan' and isinstance(e['result'],dict) and e['result'].get('terminal') for e in market_evidence)
+            proposal_end=next((e['result'] for e in reversed(market_evidence) if e['tool']=='hyperliquid_propose_plan' and isinstance(e['result'],dict) and e['result'].get('choice') in ('cancelled','read_only') and e['result'].get('terminal')),None)
+            if proposal_end:
+                text='Proposta annullata. Nessun ordine inviato.' if proposal_end['choice']=='cancelled' else 'Proposta mantenuta in sola lettura. Nessun ordine inviato.'
+                self.messages.append({'role':'assistant','content':text});self.save();output(text);self.turn_outcome='completed';return
+            terminal_execution=any(e['tool'] in ('hyperliquid_execute_plan','hyperliquid_propose_plan') and isinstance(e['result'],dict) and e['result'].get('terminal') for e in market_evidence)
             latest_compound=next((e['result'] for e in reversed(market_evidence) if e['tool']=='hyperliquid_execute_plan' and isinstance(e['result'],dict)),None)
             from financial_completion import delegated_signal
             if terminal_execution and not financial_plan_repairs and delegated_signal(prompt) and latest_compound and latest_compound.get('code')=='invalid_trade_plan' and latest_compound.get('sent') is False:
@@ -1706,7 +1742,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 self.save();output('Piano non valido prima di qualsiasi invio: una sola correzione strutturata, oppure HOLD.');continue
             if terminal_execution and not (completion_request and completion_request.get('execution_action')):
                 completion_request={**(completion_request or {}),'venue':'hyperliquid','execution_action':'order'}
-            if completion_request and completion_request.get('execution_action') and any(c['function']['name'] in ('hyperliquid_submit','hyperliquid_preview','hyperliquid_monitor','hyperliquid_execute_plan') for c in calls):
+            if completion_request and completion_request.get('execution_action') and any(c['function']['name'] in ('hyperliquid_submit','hyperliquid_preview','hyperliquid_monitor','hyperliquid_execute_plan','hyperliquid_propose_plan') for c in calls):
                 from financial_completion import assess as assess_execution,render as render_execution
                 execution=assess_execution(self,completion_request,market_evidence,HOME)
                 if execution['verified'] or execution.get('halt') or terminal_execution:

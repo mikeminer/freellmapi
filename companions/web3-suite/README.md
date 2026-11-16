@@ -11,6 +11,10 @@ clone or skill download is needed. Original licenses are retained.
 
 [Download Setup 0.1.1](https://github.com/mikeminer/freellmapi/releases/tag/web3-suite-v0.1.1).
 
+
+Current source additionally includes the 2026-11-16 execution reliability fixes
+and interactive trade proposal choices. The 0.1.1 installer predates these fixes.
+
 [English user guide](packaging/windows/USER_GUIDE.md) · [Build and verification](packaging/windows/README.md)
 
 Uses the unmodified official FreeLLMAPI router. This fork is a complementary Web3 distribution, not an upstream endorsement.

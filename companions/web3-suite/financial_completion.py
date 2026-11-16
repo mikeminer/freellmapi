@@ -47,7 +47,7 @@ def assess(agent,request,evidence,home):
     if path.exists():
         with h.database(home) as db:
             for item in evidence:
-                if item['tool'] not in ('hyperliquid_submit','hyperliquid_preview','hyperliquid_operations','hyperliquid_execute_plan'):continue
+                if item['tool'] not in ('hyperliquid_submit','hyperliquid_preview','hyperliquid_operations','hyperliquid_execute_plan','hyperliquid_propose_plan'):continue
                 value=item['result']
                 if not isinstance(value,dict):continue
                 embedded=value.get('receipt') or value.get('preview') or {}
@@ -57,7 +57,7 @@ def assess(agent,request,evidence,home):
                 row=h.receipt(db.execute('SELECT * FROM actions WHERE id=?',(ident,)).fetchone())
                 if not row:continue
                 body=row['body'];observations.append({'id':ident,'state':row['state'],'coin':body.get('coin'),'profile':row['profile']})
-                matching_tool=item['tool']==expected_tool or (required=='order' and item['tool']=='hyperliquid_execute_plan')
+                matching_tool=item['tool']==expected_tool or (required=='order' and item['tool'] in ('hyperliquid_execute_plan','hyperliquid_propose_plan'))
                 if not matching_tool or value.get('reused') or value.get('ok') is False or value.get('denied') or value.get('blocked'):continue
                 if required!='preview' and value.get('sent') is False:continue
                 action='order' if required=='preview' else required
@@ -82,7 +82,7 @@ def assess(agent,request,evidence,home):
     if candidates:
         row=candidates[-1];b=row['body'];return {'verified':True,'action':required,'id':row['id'],'state':row['state'],'coin':b.get('coin'),'profile':row['profile'],
             'bracket':b.get('bracket') if new_risk(b) else None,'protection':(row.get('response') or {}).get('protection')}
-    failures=[v['result'] for v in evidence if v['tool'] in ('hyperliquid_preview','hyperliquid_submit','hyperliquid_operations','hyperliquid_execute_plan') and isinstance(v['result'],dict) and v['result'].get('ok') is False]
+    failures=[v['result'] for v in evidence if v['tool'] in ('hyperliquid_preview','hyperliquid_submit','hyperliquid_operations','hyperliquid_execute_plan','hyperliquid_propose_plan') and isinstance(v['result'],dict) and v['result'].get('ok') is False]
     missing_plan=None
     if required=='order' and not failures and not observations:
         analyzed=any(v['tool']=='hyperliquid_analyze' and isinstance(v['result'],dict) and v['result'].get('data_ready') for v in evidence)

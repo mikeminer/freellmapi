@@ -62,7 +62,7 @@ def preflight(home,name=None):
             'instruction':'Controllo locale preliminare, non autorizzazione né verifica RPC. Se bloccato, mostra subito la causa e gli ID; non analizzare o creare altri ordini.'}
 
 
-def bind_request(agent,retry=False):
+def bind_request(agent,retry=False,confirmation=None):
     """Stable across compaction/retry/resume; independent of the routed model."""
     from work_ledger import load,save
     data=load(agent.session)
@@ -70,6 +70,10 @@ def bind_request(agent,retry=False):
     if not retry or not active.get('id'):
         text=next((m['content'] for m in reversed(agent.messages) if m.get('role')=='user' and isinstance(m.get('content'),str)),'')
         active={'id':uuid.uuid4().hex,'created':time.time(),'request':text[:2000]}
+        if confirmation:
+            active.update(request=confirmation['request_text'],confirmation_of=confirmation['confirmation_of'],
+                          user_confirmation=text,confirmed_proposal=confirmation['confirmed_proposal'],
+                          confirmed_profile=confirmation['profile'],confirmed_scope=confirmation['scope'])
         data['financial_request']=active;save(agent.session,data)
     agent.financial_request_id=active['id']
     return active['id']
@@ -95,6 +99,10 @@ def execute(agent,home,args,output=lambda text:None):
     import hyperliquid_tools as h
     if os.getenv('FREELLMAPI_READ_ONLY')=='1':h.problem('read_only_signing_forbidden','Processo di sola lettura: nessuna esecuzione.')
     if getattr(agent,'mode','ask')=='plan' or getattr(agent,'depth',0):h.problem('coordinator_only','Esecuzione disponibile solo nel coordinatore operativo.')
+    from work_ledger import load as load_ledger
+    pending=load_ledger(agent.session).get('financial_request') or {}
+    if pending.get('id')==getattr(agent,'financial_request_id',None) and pending.get('proposal_pending'):
+        h.problem('proposal_confirmation_required','La proposta attende una scelta esplicita: usa i pulsanti, senza inviare il piano precedente.',sent=False)
     if hasattr(agent,'current_market_request') and not getattr(agent,'hyperliquid_controller',None):
         from financial_completion import requirement
         request=getattr(agent,'current_market_request',None) or {}
@@ -134,6 +142,11 @@ def execute(agent,home,args,output=lambda text:None):
     key=hashlib.sha256((str(Path(agent.session).resolve())+':'+request+':'+h.fingerprint(p)).encode()).hexdigest()
     proposal={'plan':plan.to_dict(),'order_kind':kind,'slippage_bps':slippage,'bracket_slippage_bps':bracket_slippage}
     canonical=json.dumps(proposal,sort_keys=True)
+    from work_ledger import load as load_ledger
+    active=load_ledger(agent.session).get('financial_request') or {}
+    if active.get('id')==request and active.get('confirmation_of') and canonical!=json.dumps(active.get('confirmed_proposal'),sort_keys=True):
+        h.problem('confirmation_plan_changed','La conferma riguarda il piano mai inviato già mostrato: mantieni gli stessi parametri, oppure chiedi una nuova richiesta esplicita.',
+                  expected_proposal=active.get('confirmed_proposal'),sent=False)
     with h.database(home) as db:
         db.execute('CREATE TABLE IF NOT EXISTS chat_executions(id TEXT PRIMARY KEY,proposal TEXT,operation_id TEXT,state TEXT,result TEXT,created REAL)')
         db.commit();old=db.execute('SELECT * FROM chat_executions WHERE id=?',(key,)).fetchone()
@@ -213,7 +226,7 @@ def execute(agent,home,args,output=lambda text:None):
                 output('Hyperliquid · quantità arrotondata per difetto prima della revisione: '+quantity_adjustment['requested']+' → '+plan.size+' '+plan.coin)
         order={'profile':p['name'],'action':'order','coin':plan.coin,'side':plan.side,'size':plan.size,
                'order_kind':kind,'take_profit':plan.take_profit,'stop_loss':plan.stop_loss,'bracket_slippage_bps':bracket_slippage}
-        if kind=='market':order.update(slippage_bps=slippage,tighten_to_bracket=True)
+        if kind=='market':order.update(slippage_bps=slippage,tighten_to_bracket=True,entry_reference=plan.entry)
         else:order['price']=plan.entry
         previous=getattr(agent,'hyperliquid_execution_context',None)
         agent.hyperliquid_execution_context={'id':key,'leverage':plan.leverage}
@@ -222,10 +235,6 @@ def execute(agent,home,args,output=lambda text:None):
         ident=row['id']
         with h.database(home) as db:
             db.execute("UPDATE chat_executions SET operation_id=?,state='prepared' WHERE id=?",(ident,key));db.commit()
-        if kind=='market':
-            bound=Decimal(plan.entry)*(1+Decimal(slippage)/10000*(1 if plan.side=='buy' else -1))
-            if (Decimal(row['body']['price'])>bound if plan.side=='buy' else Decimal(row['body']['price'])<bound):
-                h.problem('plan_price_moved','Prezzo peggiore oltre lo slippage rispetto all’entry del piano: nessun inseguimento del segnale o invio.')
         phase('controlli finali / autorizzazione locale / invio unico')
         submitting=True
         result=h.submit(agent,home,ident)

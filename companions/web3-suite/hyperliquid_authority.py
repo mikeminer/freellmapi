@@ -57,11 +57,17 @@ def request_context(agent,home,p,body):
     from work_ledger import load
     from financial_completion import requirement
     request=load(agent.session).get('financial_request') or {}
+    if request.get('proposal_pending'):h.problem('proposal_confirmation_required','La proposta non è confermata: nessun invio o modifica della leva.')
     if request.get('created',0)<auth['enabled_at']:h.problem('new_request_required','Serve una nuova richiesta successiva al collegamento della chiave; nessun replay della sessione precedente.')
     context=getattr(agent,'key_only_plan',None)
     if body['action'] in ('order','leverage') and context and context.get('request_id')==request.get('id'):return {'source':'typed_plan','id':request['id']}
     text=next((m['content'] for m in reversed(agent.messages) if m.get('role')=='user' and isinstance(m.get('content'),str)),'')
     required=requirement(text,{'venue':'hyperliquid'})
+    confirmation=getattr(agent,'current_market_request',None) or {}
+    if (not required and confirmation.get('confirmation_of') and request.get('confirmation_of')==confirmation['confirmation_of']
+            and getattr(agent,'financial_request_id',None)==request.get('id')
+            and request.get('confirmed_profile')==p['name'] and request.get('confirmed_scope')==h.fingerprint(p)):
+        required='order'
     allowed={'order':('order',),'cancel':('cancel',),'leverage':('leverage',),'watch':('watch',)}
     if body['action'] not in allowed.get(required,()):h.problem('execution_not_requested','La richiesta corrente non autorizza questa operazione; analisi e login non avviano ordini.')
     return {'source':'user_request','id':request['id']}
