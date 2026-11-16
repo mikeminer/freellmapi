@@ -12,6 +12,20 @@ browser games and Seeker APKs, with Solana wallet/payment integration where
 selected by the game owner. Skill source and supporting assets/references:
 https://github.com/mikeminer/devfridge/tree/master/skills/devfridge-game-builder
 
+## Changes in 0.1.2
+
+Model changes preserve current user constraints and native answers before the
+next inference request. Trade proposals use native confirmation/refresh/cancel
+controls. Percentage sizing is calculated from verified available capital and
+exchange precision; margin versus notional is clarified once and remembered.
+Malformed plan arguments receive one bounded correction rather than repeated
+execution attempts. A proposal does not send an order by itself.
+
+When upgrading from 0.1.1, close suite clients and the Remote coordinator, run
+the new Setup, then reopen and resume your saved conversation. Existing
+credentials, sessions and vault files are retained. Running processes keep
+the old code until restarted. No account configuration is bundled.
+
 ## What is included
 
 The Windows x64 installer includes a private Python runtime and its libraries,
@@ -32,7 +46,7 @@ Installing the suite does not connect a wallet or authorize a real trade.
 
 ## Install on a new Windows PC
 
-1. Download `FREELLMAPI-Web3-Suite-Setup-0.1.1.exe` and `SHA256SUMS.txt`
+1. Download `FREELLMAPI-Web3-Suite-Setup-0.1.2.exe` and `SHA256SUMS.txt`
    from this fork's release. Compare the checksum with `Get-FileHash`.
 2. Run the installer. Full installation includes the router and Tailscale;
    choose Custom to reuse an existing router or VPN installation. Tailscale

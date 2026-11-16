@@ -3,7 +3,7 @@
   #error PayloadRoot must point to a validated, self-contained suite payload.
 #endif
 #ifndef SuiteVersion
-  #define SuiteVersion "0.1.1"
+  #define SuiteVersion "0.1.2"
 #endif
 
 [Setup]

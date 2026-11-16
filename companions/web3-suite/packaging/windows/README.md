@@ -11,25 +11,34 @@ The destination PC needs neither Python nor Node. Inno Setup 7 is the compiler;
 its official signed installer is included in the download lock. Install the
 compiler into a development tools directory without changing Tailscale/router.
 
-Run from the companion source root (the directory containing freellmapi.py):
+Export the tracked companion tree from the fork into a fresh build directory.
+Record the full Git commit as `$sourceCommit` before exporting. Build from that
+clean source root (the directory containing freellmapi.py), never from a user
+workspace containing private QA scripts or runtime-home.json. Use fresh staging;
+assembly refuses to merge an existing agent directory.
+
+A release reuses the unchanged APK from 0.1.1, verified against its published
+SHA-256; place it at mobile/build/freellmapi-remote.apk before assembly.
+
+Run from the clean companion source root:
 
 ```powershell
 python packaging/windows/fetch_components.py
-python packaging/windows/prepare_runtime.py
-python packaging/windows/assemble.py
+python packaging/windows/prepare_runtime.py --payload dist/payload-0.1.2
+python packaging/windows/assemble.py --output dist/payload-0.1.2 --source-commit $sourceCommit
 $suiteRoot = (Resolve-Path .).Path
-$env:PATH = "$suiteRoot\dist\payload\runtime\node;" + $env:PATH
+$env:PATH = "$suiteRoot\dist\payload-0.1.2\runtime\node;" + $env:PATH
 foreach ($sdk in @('pumpfun', 'solana')) {
-    Push-Location "$suiteRoot\dist\payload\agent\integrations\$sdk"
-    & "$suiteRoot\dist\payload\runtime\node\npm.cmd" ci --ignore-scripts --no-audit --no-fund
+    Push-Location "$suiteRoot\dist\payload-0.1.2\agent\integrations\$sdk"
+    & "$suiteRoot\dist\payload-0.1.2\runtime\node\npm.cmd" ci --ignore-scripts --no-audit --no-fund
     if ($LASTEXITCODE) { throw "SDK installation failed: $sdk" }
     Pop-Location
 }
-$env:PLAYWRIGHT_BROWSERS_PATH = "$suiteRoot\dist\payload\runtime\browsers"
+$env:PLAYWRIGHT_BROWSERS_PATH = "$suiteRoot\dist\payload-0.1.2\runtime\browsers"
 $env:NODE_USE_SYSTEM_CA = '1'
-& "$suiteRoot\dist\payload\runtime\python\python.exe" -I -m playwright install chromium
-python packaging/windows/build_installer.py --payload dist/payload --check
-python packaging/windows/build_installer.py --payload dist/payload --version 0.1.1 --iscc C:\tools\inno\ISCC.exe
+& "$suiteRoot\dist\payload-0.1.2\runtime\python\python.exe" -I -m playwright install chromium
+python packaging/windows/build_installer.py --payload dist/payload-0.1.2 --check
+python packaging/windows/build_installer.py --payload dist/payload-0.1.2 --version 0.1.2 --iscc C:\tools\inno\ISCC.exe
 ```
 
 The component lock pins official URLs and SHA-256 digests. CPython's NuGet
@@ -52,7 +61,7 @@ The build fails if any bundled file is missing, altered or unexpected. No
 skill install hooks or scripts execute. Git is needed only on the build host;
 the installed skill is fully available offline.
 
-Output: dist/windows/FREELLMAPI-Web3-Suite-Setup-0.1.1.exe.
+Output: dist/windows/FREELLMAPI-Web3-Suite-Setup-0.1.2.exe.
 The official icon appears on Setup, Uninstall, Installed Apps and shortcuts.
 Desktop AppUserModelID matches Qt. Both desktop shortcuts are selected by
 default; selection is preserved on updates. The current-user PATH receives
@@ -72,7 +81,7 @@ alone. Uninstall removes only its own managed link and preserves user files.
 
 ```powershell
 python -m unittest test_bundled_skills test_windows_installer test_suite_setup test_skills test_skill_router test_desktop_connectors test_memory_write_policy test_memory test_brain_memory test_shared_desktop test_session_routing test_desktop_languages_brand
-python packaging/windows/qa_release.py --version 0.1.1 --upgrade-from 0.1.0
+python packaging/windows/qa_release.py --version 0.1.2 --upgrade-from 0.1.1
 ```
 
 Exercise the exact compiled EXE in a test directory containing spaces, using
@@ -93,7 +102,7 @@ at uninstall. Do not configure keys, replay requests or send orders.
 Complete acceptance additionally needs a genuinely clean Windows VM, personal
 Tailscale/provider login and physical Android pairing. Distinguish those from
 build-host smoke tests. Publish an explicitly labelled prerelease while clean-
-VM acceptance or code signing remains incomplete. Release assets: EXE, APK,
+VM acceptance or code signing remains incomplete. Release assets: EXE, APK, source-files.json, suite-manifest.json, privacy-audit.json,
 SHA256SUMS.txt, English guide, build report and machine-readable results.
 
 Third-party components keep their licenses and notices. Qt/PySide, PyMuPDF,
@@ -102,3 +111,14 @@ logo's MIT notice is included. Companion source is available in the fork;
 upstream source and notices remain preserved. This is not upstream endorsement.
 DevFridge's Business Source License 1.1 is included as a separate notice;
 vendored skills keep their own licenses. Do not label the entire bundle MIT.
+
+## Source and privacy checks
+
+`source-files.json` records relative paths and SHA-256 hashes from the clean
+export. Preflight and actual-EXE QA verify the new modules and source hashes.
+Run `audit_payload.py --payload dist/payload-0.1.2 --report privacy-audit.json`
+before compiling; optionally pass a private identifier list via
+`--forbidden-values-file` outside staging. It never writes needle values into
+the report. Keep raw build/QA logs local; publish only sanitized reports.
+
+See [CHANGELOG.md](CHANGELOG.md) for the 0.1.2 behavior changes.

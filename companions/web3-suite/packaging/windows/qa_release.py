@@ -10,8 +10,8 @@ def run(command,*,env=None,cwd=None,timeout=180):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version',default='0.1.1')
-    parser.add_argument('--upgrade-from',default='0.1.0')
+    parser.add_argument('--version',default=(HERE/'release-version.txt').read_text().strip())
+    parser.add_argument('--upgrade-from',default='0.1.1')
     args=parser.parse_args()
     QA=ROOT/('dist/qa-'+args.version)
     # Use local application storage, like the actual per-user installation.
@@ -53,6 +53,10 @@ def main():
         baseline=ROOT/('dist/windows/FREELLMAPI-Web3-Suite-Setup-'+args.upgrade_from+'.exe')
         assert baseline.is_file();install(baseline,'baseline-'+args.upgrade_from)
     install(exe,'installer-'+args.version)
+    source_manifest=json.loads((INSTALL/'source-files.json').read_text())
+    for name,expected in source_manifest['files'].items():
+        assert hashlib.sha256((INSTALL/name).read_bytes()).hexdigest()==expected,'Installed source mismatch: '+name
+    assert all((INSTALL/'agent'/name).is_file() for name in ('financial_allocation.py','financial_focus.py','trade_proposal.py'))
     # Prove registration was performed by Setup, not by a later Skills import.
     registry=[json.loads(p.read_text(encoding='utf-8')) for p in (home/'skills').glob('*/source.json')]
     builtin=next(x for x in registry if x.get('bundle_id')=='devfridge-game-builder')
@@ -93,7 +97,13 @@ def main():
     sdk_output=run([node,'--test',sdk/'helius-worker.test.mjs',sdk/'discovery.test.mjs',sdk/'events.test.mjs'],env=env,cwd=QA)
     assert '# fail 0' in sdk_output
     (QA/'sdk-installed.log').write_text(sdk_output,encoding='utf-8')
+    print('Running installed-source regressions with private Python; WAN blocked',flush=True)
+    regression_log=run([python,'-I',INSTALL/'agent/packaging/windows/regression_runner.py','--suite-root',INSTALL,'--output',QA/'regression.json'],env=env,cwd=QA,timeout=600)
+    (QA/'regression.log').write_text(regression_log,encoding='utf-8')
+    regressions=json.loads((QA/'regression.json').read_text());assert regressions['status']=='PASS'
     result={'status':'PASS_WITH_LIMITATIONS','installer_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),
+            'installed_source_files_verified':len(source_manifest['files']),'source_commit':source_manifest['source_commit'],
+            'installed_regressions':regressions,
             'version':args.version,'upgrade_from':args.upgrade_from,'bundled_skill_registered_by_setup':True,
             'bundled_skill_full_hashes_verified':894,'bundled_skill_version':'1.12.0',
             'offline_skill_read_and_desktop_entry_verified':True,'idempotent_registration':True,

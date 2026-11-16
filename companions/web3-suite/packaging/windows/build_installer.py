@@ -11,6 +11,7 @@ import re
 import shutil
 import struct
 import subprocess
+import tempfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -18,6 +19,8 @@ ICON = ROOT/'desktop/freellmapi-official.ico'
 REQUIRED = ('runtime/python/python.exe', 'runtime/python/pythonw.exe',
             'runtime/python/python313.dll', 'agent/desktop_app.py',
             'agent/runtime_bootstrap.py', 'agent/freellmapi.py',
+            'agent/financial_focus.py','agent/financial_allocation.py','agent/trade_proposal.py',
+            'suite-manifest.json','source-files.json',
             'agent/desktop/index.html', 'agent/desktop/freellmapi-official.ico')
 
 
@@ -52,6 +55,14 @@ def validate_payload(payload, *, probe=True):
                 file.relative_to(payload).as_posix().casefold()=='agent/config.json'):
             raise ValueError('Dati personali o configurazione locale nel payload: '+str(file.relative_to(payload)))
     sizes = icon_sizes(ICON)
+    manifest=json.loads((payload/'suite-manifest.json').read_text(encoding='utf-8'))
+    version=manifest.get('version')
+    if not isinstance(version,str) or not re.fullmatch(r'\d+\.\d+\.\d+(?:\.\d+)?',version):raise ValueError('Versione manifest non valida.')
+    sources=json.loads((payload/'source-files.json').read_text(encoding='utf-8'))
+    if hashlib_file(payload/'source-files.json')!=manifest.get('source_files_sha256'):raise ValueError('Manifest sorgenti alterato.')
+    for name,expected in sources.get('files',{}).items():
+        file=(payload/name).resolve()
+        if not file.is_relative_to(payload) or not file.is_file() or hashlib_file(file)!=expected:raise ValueError('Sorgente release mancante o alterato: '+name)
     if not {(16,16), (32,32), (48,48), (256,256)} <= sizes:
         raise ValueError('Mancano dimensioni ICO richieste per Windows.')
     if (payload/'agent/desktop/freellmapi-official.ico').read_bytes() != ICON.read_bytes():
@@ -64,16 +75,23 @@ def validate_payload(payload, *, probe=True):
                 "sys.path.insert(0,sys.argv[3]); import suite; suite.configure(pathlib.Path(sys.argv[3]).parent); "
                 "import freellmapi, desktop_backend, win32api; "
                 "from PySide6 import QtWebEngineWidgets; print('private-runtime-ok')")
-        result = subprocess.run([str(runtime/'python.exe'), '-I', '-X', 'utf8', '-c', code,
-                                 str(runtime), str(payload/'agent'),str(payload/'launcher')], cwd=payload,
-                                capture_output=True, text=True, encoding='utf-8', timeout=60)
+        with tempfile.TemporaryDirectory(prefix='freellmapi-build-probe-') as temporary:
+            env=dict(os.environ,FREELLMAPI_HOME=str(Path(temporary)/'home'),APPDATA=str(Path(temporary)/'appdata'),FREELLMAPI_READ_ONLY='1',PYTHONDONTWRITEBYTECODE='1')
+            result = subprocess.run([str(runtime/'python.exe'), '-I', '-X', 'utf8', '-c', code,
+                                     str(runtime), str(payload/'agent'),str(payload/'launcher')], cwd=payload,env=env,
+                                    capture_output=True, text=True, encoding='utf-8', timeout=60)
         if result.returncode or 'private-runtime-ok' not in result.stdout:
             raise ValueError('Il runtime Python privato non supera la verifica delle dipendenze.')
         import sys
         sys.path.insert(0,str(ROOT))
         from bundled_skills import validate
         validate(payload)
-    return {'payload':str(payload), 'icon_sizes':sorted(sizes), 'runtime_probe':probe}
+    return {'payload':str(payload), 'version':version,'source_files_verified':len(sources.get('files',{})), 'icon_sizes':sorted(sizes), 'runtime_probe':probe}
+
+
+def hashlib_file(path):
+    import hashlib
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def compiler(explicit=None):
@@ -93,7 +111,7 @@ def compiler(explicit=None):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--payload',required=True,type=Path)
-    parser.add_argument('--version',default='0.1.1')
+    parser.add_argument('--version',default=(HERE/'release-version.txt').read_text().strip())
     parser.add_argument('--iscc',type=Path)
     parser.add_argument('--check',action='store_true',help='Verifica runtime e branding senza compilare.')
     args=parser.parse_args()
@@ -101,6 +119,7 @@ def main():
         parser.error('Versione richiesta: x.y.z oppure x.y.z.w')
     try:
         checked=validate_payload(args.payload)
+        if checked['version']!=args.version:raise ValueError('La versione compilata deve coincidere con il manifest del payload.')
         if args.check:
             print(json.dumps(checked));return
         subprocess.run([str(compiler(args.iscc)), '/DPayloadRoot='+checked['payload'],

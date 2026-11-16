@@ -1,5 +1,5 @@
 """Allowlisted payload assembly. Run after fetch_components and pip staging."""
-import hashlib,json,os,shutil,subprocess,sys,zipfile
+import argparse,hashlib,json,os,shutil,subprocess,sys,zipfile
 from pathlib import Path
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1];OUT=ROOT/'dist/payload';CACHE=ROOT/'dist/downloads'
 
@@ -33,6 +33,16 @@ def source_files(root=ROOT):
                 yield p
 
 def main():
+    global OUT,CACHE
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output',type=Path,default=OUT)
+    parser.add_argument('--cache',type=Path,default=CACHE)
+    parser.add_argument('--skill-checkout',type=Path)
+    parser.add_argument('--source-commit',required=True,help='Commit exported into this clean source tree.')
+    args=parser.parse_args();OUT=args.output.resolve();CACHE=args.cache.resolve()
+    if (OUT/'agent').exists():raise ValueError('Use fresh agent staging; existing files are not merged into a release.')
+    if not __import__('re').fullmatch('[0-9a-f]{40}',args.source_commit):raise ValueError('Full source commit required')
+    version=(HERE/'release-version.txt').read_text().strip()
     lock=json.loads((HERE/'components.lock.json').read_text())
     for name,row in lock['components'].items():
         source=CACHE/row['file']
@@ -44,25 +54,33 @@ def main():
     (OUT/'prerequisites').mkdir(exist_ok=True)
     shutil.copyfile(CACHE/lock['components']['tailscale']['file'],OUT/'prerequisites/tailscale.msi')
     shutil.copyfile(CACHE/lock['components']['vcredist']['file'],OUT/'prerequisites/vc_redist.x64.exe')
+    source_manifest={}
     for source in source_files():
         target=OUT/'agent'/source.relative_to(ROOT);target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+        source_manifest[target.relative_to(OUT).as_posix()]=hashlib.sha256(source.read_bytes()).hexdigest()
     for source,target in ((HERE/'launcher.py',OUT/'launcher/suite.py'),(HERE/'suite_setup.py',OUT/'agent/suite_setup.py'),
                           (ROOT/'desktop/freellmapi-official.ico',OUT/'assets/freellmapi.ico'),
                           (ROOT/'mobile/build/freellmapi-remote.apk',OUT/'mobile/freellmapi-remote.apk'),
                           (HERE/'USER_GUIDE.md',OUT/'docs/USER_GUIDE.md')):
         target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+        source_manifest[target.relative_to(OUT).as_posix()]=hashlib.sha256(target.read_bytes()).hexdigest()
     from stage_skills import stage
-    bundled=stage(payload=OUT)
+    bundled=stage(checkout=args.skill_checkout,payload=OUT)
     # Console command is available in every CMD launched with the suite's bin
     # on PATH. The installer registers this directory for the current user.
     (OUT/'bin').mkdir(exist_ok=True)
     (OUT/'bin/freellmapi.cmd').write_text('@echo off\n"%~dp0..\\runtime\\python\\python.exe" -I -X utf8 "%~dp0..\\launcher\\suite.py" cmd %*\nexit /b %errorlevel%\n')
-    (OUT/'suite-manifest.json').write_text(json.dumps({'version':'0.1.1','specialization':'Web3: Hyperliquid, Solana, Helius, Pump.fun, DevFridge Game Builder',
-                                                    'bundled_skills':[{'id':p['id'],'version':p['version'],'files':len(p['files']),'source_commit':p['source_commit']} for p in bundled['packages']],
-                                                    'components':lock['components'],'apk_sha256':hashlib.sha256((OUT/'mobile/freellmapi-remote.apk').read_bytes()).hexdigest()},indent=2))
     subprocess.run([str(OUT/'runtime/python/python.exe'),'-I','-c',
                     "import sys,pathlib;from markdown_it import MarkdownIt;p=pathlib.Path(sys.argv[1]);p.with_suffix('.html').write_text('<!doctype html><meta charset=utf-8><title>FREELLMAPI Web3 Suite</title><style>body{max-width:900px;margin:40px auto;padding:20px;font:17px/1.6 system-ui;color:#202630}pre{white-space:pre-wrap;background:#eee;padding:15px}a{color:#2864ce}</style>'+MarkdownIt('commonmark',{'html':False}).render(p.read_text(encoding='utf-8')),encoding='utf-8')",
                     str(OUT/'docs/USER_GUIDE.md')],check=True)
+    for path in (OUT/'docs/USER_GUIDE.html',OUT/'bin/freellmapi.cmd'):
+        source_manifest[path.relative_to(OUT).as_posix()]=hashlib.sha256(path.read_bytes()).hexdigest()
+    (OUT/'source-files.json').write_text(json.dumps({'schema_version':1,'source_commit':args.source_commit,'files':source_manifest},indent=2),encoding='utf-8')
+    (OUT/'suite-manifest.json').write_text(json.dumps({'version':version,'source_commit':args.source_commit,
+        'source_files_sha256':hashlib.sha256((OUT/'source-files.json').read_bytes()).hexdigest(),
+        'specialization':'Web3: Hyperliquid, Solana, Helius, Pump.fun, DevFridge Game Builder',
+        'bundled_skills':[{'id':p['id'],'version':p['version'],'files':len(p['files']),'source_commit':p['source_commit']} for p in bundled['packages']],
+        'components':lock['components'],'apk_sha256':hashlib.sha256((OUT/'mobile/freellmapi-remote.apk').read_bytes()).hexdigest()},indent=2),encoding='utf-8')
     print('Payload assembled:',OUT,flush=True)
 
 if __name__=='__main__':main()

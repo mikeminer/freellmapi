@@ -22,6 +22,9 @@ class WindowsInstallerTests(unittest.TestCase):
             path=self.payload/name;path.parent.mkdir(parents=True,exist_ok=True)
             path.write_bytes(b'fixture, not executable')
         shutil.copyfile(build.ICON,self.payload/'agent/desktop/freellmapi-official.ico')
+        source={'files':{'agent/financial_allocation.py':hashlib.sha256((self.payload/'agent/financial_allocation.py').read_bytes()).hexdigest()}}
+        (self.payload/'source-files.json').write_text(json.dumps(source))
+        (self.payload/'suite-manifest.json').write_text(json.dumps({'version':'0.1.2','source_files_sha256':hashlib.sha256((self.payload/'source-files.json').read_bytes()).hexdigest()}))
         skill=self.payload/'skills/dgb-test/SKILL.md';skill.parent.mkdir(parents=True)
         raw=b'Synthetic build skill';skill.write_bytes(raw)
         (self.payload/'bundled-skills.json').write_text(json.dumps({'schema_version':1,'packages':[{
@@ -77,6 +80,17 @@ class WindowsInstallerTests(unittest.TestCase):
         (self.payload/'agent/desktop/freellmapi-official.ico').write_bytes(b'wrong icon')
         with self.assertRaisesRegex(ValueError,'stessa icona ufficiale'):
             build.validate_payload(self.payload,probe=False)
+    def test_missing_latest_allocation_module_cannot_be_released(self):
+        (self.payload/'agent/financial_allocation.py').unlink()
+        with self.assertRaisesRegex(ValueError,'Payload incompleto'):build.validate_payload(self.payload,probe=False)
+    def test_changed_source_after_manifest_cannot_be_released(self):
+        (self.payload/'agent/financial_allocation.py').write_text('stale or changed source')
+        with self.assertRaisesRegex(ValueError,'Sorgente release'):build.validate_payload(self.payload,probe=False)
+    def test_probe_home_is_isolated_from_live_accounts(self):
+        success=subprocess.CompletedProcess([],0,'private-runtime-ok\n','')
+        with patch.object(build.subprocess,'run',return_value=success) as run:build.validate_payload(self.payload)
+        env=run.call_args.kwargs['env']
+        self.assertIn('freellmapi-build-probe-',env['FREELLMAPI_HOME']);self.assertEqual(env['FREELLMAPI_READ_ONLY'],'1')
 
 
 if __name__=='__main__':unittest.main()
