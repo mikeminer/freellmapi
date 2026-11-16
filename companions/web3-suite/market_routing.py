@@ -27,7 +27,11 @@ def intent(prompt,messages=()):
     executing=execution_verb(text)
     if re.search(r'pump[.\s_-]?fun|pumpswap|bonding.?curve',text):return None
     if re.search(r'\b(solana|helius)\b',text) and 'hyperliquid' not in text and 'hypercore' not in text:return None
-    if re.search(r'\b(?:crea|sviluppa|implementa|build|implement|debug|correggi)\b',text) and not re.search(r'\b(?:prezzo attuale|dati attuali|current price)\b',text):return None
+    proposal_repair=(bool(re.search(r'\bcorreggi\b',text)) and
+                     bool(re.search(r'\b(?:proposta|piano|anteprima|preview)\b',text)) and
+                     recent_venue(messages,prompt)=='hyperliquid' and
+                     not re.search(r'\b(?:codice|software|bug|test|script|funzione|file|modulo|sdk|tool|strument\w*|repo\w*)\b',text))
+    if re.search(r'\b(?:crea|sviluppa|implementa|build|implement|debug|correggi)\b',text) and not proposal_repair and not re.search(r'\b(?:prezzo attuale|dati attuali|current price)\b',text):return None
     if any(name in text for name in ('coinbase','kraken','bybit','okx')):return None
     pair=re.search(r'\b([a-z0-9]{2,12})\s*[/_-]\s*(usdc|usdt|usd|eur)\b',text)
     if not pair and re.fullmatch(r'\s*(?:s[iì]|yes|ok|va bene|\d+(?:[.,]\d+)?\s*[x×%]?)[.!\s]*',text):
@@ -50,7 +54,7 @@ def intent(prompt,messages=()):
             if not prior and len(m['content'].split())>4:break
     if not pair:
         coin=re.search(r'\b(btc|eth|pump|sol|hype)\b',text)
-        if coin and (executing or re.search(r'\b(?:pair|coppia|analisi|analizz\w*|analy[sz]\w*|valuta|trad\w*|long|short|leva|leverage|prezzo|price|segnal\w*|signal\w*|ordin\w*|compra|vendi|buy|sell)\b',text)):
+        if coin and (executing or re.search(r'\b(?:pair|coppia|analisi|analizz\w*|analy[sz]\w*|valuta|trad\w*|proposta|piano|anteprima|preview|long|short|leva|leverage|prezzo|price|segnal\w*|signal\w*|ordin\w*|compra|vendi|buy|sell)\b',text)):
             pair=re.search(r'\b([a-z0-9]{2,12})/(usdc)\b',coin.group(1)+'/usdc')
         elif re.search(r'\b(?:hyperliquid|hypercore)\b',text) and re.search(r'\b(?:trova\w*|cerca\w*|scegli\w*|seleziona\w*|miglior\w*|best|find|scan|analizza)\b',text) and re.search(r'\b(?:trade|trading|segnal\w*|signal\w*|opportunit\w*|mercat\w*|markets|perpetual\w*)\b',text):
             # A requested market selection is not an implicit return to the
@@ -60,7 +64,7 @@ def intent(prompt,messages=()):
         elif wallet:
             if 'binance' in text:return None
             return {'kind':'account','pair':None,'coin':None,'quote':'USDC','trading':False,'venue':'hyperliquid'}
-        elif executing or re.search(r'\b(?:esegui|continua|prosegui|trade|trad\w*|compra|vendi|usa|prepara|annulla|cancella)\b',text):
+        elif proposal_repair or executing or re.search(r'\b(?:esegui|continua|prosegui|trade|trad\w*|compra|vendi|usa|prepara|annulla|cancella)\b',text):
             # Resolve only from a recent USER request, never from memories, old
             # receipts or model prose. A topic change ends implicit inheritance.
             for m in reversed(messages):
@@ -73,7 +77,7 @@ def intent(prompt,messages=()):
                 if len(previous.split())>4 and not prior:break
             return None
         else:return None
-    if not executing and not re.search(r'\b(?:pair|coppia|segnal\w*|signal\w*|trading|trad\w*|long|short|entry|tp|sl|prezzo|quotazion\w*|candele|analisi|analizza|valuta|price|candles|buy|sell|ordine|ordini|leva|leverage)\b',text):return None
+    if not executing and not re.search(r'\b(?:pair|coppia|segnal\w*|signal\w*|trading|trad\w*|proposta|piano|anteprima|preview|long|short|entry|tp|sl|prezzo|quotazion\w*|candele|analisi|analizza|valuta|price|candles|buy|sell|ordine|ordini|leva|leverage)\b',text):return None
     trading=executing or bool(re.search(r'\b(?:esegui|compra|vendi|ordine|ordini|trad\w*|buy|sell|leva|leverage)\b',text))
     if not executing and re.search(r'\b(?:analizz\w*|analy[sz]\w*|formul\w*|propon\w*|sugger\w*|suggest\w*|recommend\w*)\b',text):trading=False
     if re.search(r'\b(?:non|senza|do not|without)\b.{0,45}\b(?:ordini|orders|trading|buy|sell)\b',text) and not re.search(r'\b(?:leva|leverage|perpetual|perps)\b',text):trading=False
@@ -141,7 +145,7 @@ def analysis_payload(payload,request):
     """Bound read-only market context without changing the durable conversation."""
     if not request or request.get('execution_action') or request.get('trading'):return None
     original=json.dumps(payload,ensure_ascii=False)
-    allowed={'hyperliquid_read','hyperliquid_status','hyperliquid_scan','hyperliquid_analyze',
+    allowed={'hyperliquid_read','hyperliquid_status','hyperliquid_scan','hyperliquid_analyze','hyperliquid_propose_plan',
              'market_snapshot','ask_user','context_inspect','context_checkpoint','memory_read','memory_search'}
     payload['tools']=[t for t in payload['tools'] if t['function']['name'] in allowed]
     base=payload['messages'][0].get('content','')

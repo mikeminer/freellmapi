@@ -66,6 +66,55 @@ class ProposalTests(unittest.TestCase):
         self.prepare()
         result=h.dispatch(self.agent,'hyperliquid_propose_plan',self.args|{'plan':'{"decision":"enter","size":"bad"}'},self.f.home)
         self.assertEqual(result['code'],'invalid_trade_plan');self.assertTrue(result['terminal']);self.assertFalse(result['sent'])
+        self.assertIn('enter_fields',result['plan_contract'])
+    def test_proposal_and_execution_both_describe_json_not_a_prose_summary(self):
+        import freellmapi as f
+        for name in ('hyperliquid_propose_plan','hyperliquid_execute_plan'):
+            schema=next(t['function']['parameters'] for t in f.TOOLS if t['function']['name']==name)
+            self.assertIn('NEVER a prose summary',schema['properties']['plan']['description'])
+            self.assertEqual(schema['required'],['plan'])
+    def test_hold_proposal_never_asks_or_reaches_a_signer(self):
+        self.prepare()
+        with patch('hyperliquid_menu.choose',side_effect=AssertionError('HOLD has no execution menu')):
+            result=propose(self.agent,self.f.home,{'plan':json.dumps({'decision':'hold','reason':'No justified setup'})})
+        self.assertEqual(result['choice'],'hold');self.assertFalse(result['sent']);self.f.secret.assert_not_called()
+    def test_real_model_prose_plan_is_repaired_once_across_model_change(self):
+        self.prose_repair(False)
+    def test_repeated_prose_plan_stops_after_one_repair_without_a_menu_or_order(self):
+        self.prose_repair(True)
+    def test_unoffered_old_preview_tool_is_repaired_before_dispatch(self):
+        self.prose_repair(False,unoffered=True)
+    def test_flattened_arguments_are_repaired_once_before_dispatch_and_menu_discovery_is_bounded(self):
+        self.prose_repair(False,flattened=True)
+    def prose_repair(self,repeat,unoffered=False,flattened=False):
+        import freellmapi as f
+        from session_store import Sessions
+        args=self.prepare()
+        with patch.object(f,'HOME',self.f.home):
+            agent=f.Agent(self.f.home,'http://127.0.0.1:9','SYNTHETIC','model-a')
+            sessions=Sessions(self.f.home);sessions.activate(agent,sessions.create(self.f.home))
+            agent.auto_skills=False;agent.streaming=False;agent.context_limit=200000;agent.mode='auto'
+            captured=[]
+            def respond(route,payload):
+                captured.append(json.loads(json.dumps(payload)))
+                invalid=len(captured)==1 or repeat
+                agent.model='model-b'
+                arguments={**args,'plan':'PUMP LONG, size 1000, entry 0.01, TP 0.011, SL 0.009, leva 1x'} if invalid else args
+                if flattened and len(captured)==1:arguments={**json.loads(args['plan']),'leverage':'1','order_kind':'market','slippage_bps':50,'bracket_slippage_bps':50}
+                name='hyperliquid_preview' if unoffered and len(captured)==1 else 'hyperliquid_propose_plan'
+                return {'choices':[{'message':{'role':'assistant','content':None,'tool_calls':[{'id':'proposal-'+str(len(captured)),'type':'function','function':{'name':name,'arguments':json.dumps(arguments)}}]}}]}
+            with patch.object(agent,'api',side_effect=respond) as api,patch('market_routing.collect',return_value=[]),patch('hyperliquid_menu.choose',return_value=OPTIONS[2]) as choose,patch.object(f,'output'),redirect_stdout(io.StringIO()):
+                agent.turn('Proponi un trade PUMP su Hyperliquid con leva 1'+(', mostra anteprima con pulsanti' if flattened else ''))
+            self.assertEqual(api.call_count,2)
+            self.assertEqual(captured[1]['model'],'model-b')
+            if not unoffered:self.assertEqual(captured[1]['tool_choice']['function']['name'],'hyperliquid_propose_plan')
+            names={t['function']['name'] for t in captured[1]['tools']}
+            self.assertNotIn('hyperliquid_execute_plan',names);self.assertNotIn('hyperliquid_submit',names)
+            self.assertIn('financial_tool_not_offered' if unoffered else 'plan_contract',str(captured[1]['messages']))
+            self.assertEqual(agent.turn_outcome,'incomplete' if repeat else 'completed')
+            self.assertEqual(choose.call_count,0 if repeat else 1)
+            if flattened:self.assertEqual({t['function']['name'] for t in captured[0]['tools']},{'hyperliquid_propose_plan','ask_user'})
+        self.f.secret.assert_not_called();self.f.exchange.bulk_orders.assert_not_called();self.f.exchange.update_leverage.assert_not_called()
     def test_crash_after_click_does_not_replay_the_click_or_execute_again(self):
         args=self.prepare()
         with patch('hyperliquid_menu.choose',return_value=OPTIONS[0]) as choose,patch.object(x,'execute',side_effect=RuntimeError('synthetic interruption')) as execute:

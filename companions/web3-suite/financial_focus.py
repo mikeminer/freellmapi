@@ -47,6 +47,7 @@ def bind(agent,prompt,request):
                 if k not in given:facts.pop(k,None)
         facts.update(given)
     focus={'venue':'hyperliquid','coin':coin,'constraints':facts,'source':'explicit_user_turns','financial_authority':False}
+    if old.get('coin')==coin and old.get('choice_sources'):focus['choice_sources']=old['choice_sources']
     request['financial_constraints']=facts;data['financial_focus']=focus;save(agent.session,data)
     return focus
 
@@ -102,7 +103,13 @@ def response_issue(message,focus):
             if not isinstance(plan,dict):continue
             if plan.get('coin') and plan['coin']!=focus['coin']:return 'request_coin_mismatch'
             expected=focus['constraints'].get('leverage')
-            if expected and plan.get('leverage') is not None and plan['leverage']!=expected:return 'request_leverage_mismatch'
+            if expected and plan.get('leverage') is not None:
+                # A provider's numeric string is a wire-format error, not a
+                # different user choice. Strict plan validation still rejects
+                # invalid types and requests one structured correction.
+                try:different=Decimal(str(plan['leverage']))!=Decimal(expected)
+                except Exception:different=False
+                if different:return 'request_leverage_mismatch'
     if '?' in text or re.search(r'(?i)\b(?:indica|inserisci|specifica|provide|enter)\b',text):
         if re.search(r'(?i)quantit|dimension|size|leva|leverage|capitale|capital',text):
             fake=type('Focus',(),{'financial_focus':focus})()

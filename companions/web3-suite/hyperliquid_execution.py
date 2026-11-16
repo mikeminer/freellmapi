@@ -45,6 +45,23 @@ def parse_plan(value):
     return TradePlan.parse(decoded)
 
 
+def plan_contract():
+    return {'container':'plan is a JSON-encoded object string, never prose',
+        'enter_fields':['decision','reason','coin','side','size','entry','take_profit','stop_loss','leverage'],
+        'execution_options_location':'order_kind, slippage_bps and bracket_slippage_bps are sibling arguments OUTSIDE plan',
+        'size_unit':'BASE asset decimal string, not margin USDC','side_values':['buy','sell'],
+        'leverage_type':'positive integer','price_types':'positive decimal strings'}
+
+
+def invalid_plan(exc):
+    """Same correctable contract for execution and non-sending proposals."""
+    import hyperliquid_tools as h
+    details=getattr(exc,'details',{})
+    message=str(exc)+(' · campi non ammessi: '+', '.join(details['unknown_fields']) if details.get('unknown_fields') else '')
+    h.problem('invalid_trade_plan',message,**details,plan_contract=plan_contract(),
+        correction='Correggi solo la rappresentazione o i campi indicati, mantenendo coin, budget, direzione e richiesta corrente. Nessun invio è avvenuto.')
+
+
 def preflight(home,name=None):
     import hyperliquid_tools as h
     p=h.profile(home,name)
@@ -113,13 +130,7 @@ def execute(agent,home,args,output=lambda text:None):
         args,wire_repairs=normalize_execution_args(args)
         plan=parse_plan(args.get('plan'))
     except (ValueError,TypeError) as exc:
-        details=getattr(exc,'details',{})
-        message=str(exc)+(' · campi non ammessi: '+', '.join(details['unknown_fields']) if details.get('unknown_fields') else '')
-        h.problem('invalid_trade_plan',message,**details,plan_contract={'container':'plan is a JSON string',
-            'enter_fields':['decision','reason','coin','side','size','entry','take_profit','stop_loss','leverage'],
-            'execution_options_location':'order_kind, slippage_bps and bracket_slippage_bps are sibling arguments OUTSIDE plan',
-            'size_unit':'BASE asset decimal string, not margin USDC','side_values':['buy','sell']},
-            correction='Correggi solo i campi indicati, mantenendo coin, budget, direzione e richiesta corrente. Nessun invio è avvenuto.')
+        invalid_plan(exc)
     if plan.decision not in ('enter','hold') or plan.trigger is not None:
         h.problem('entry_plan_required','Questo strumento esegue solo un ingresso immediato completo. Per livelli futuri usa hyperliquid_monitor; HOLD non invia nulla.')
     from financial_focus import validate_plan

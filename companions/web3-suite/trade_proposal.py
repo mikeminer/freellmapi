@@ -19,7 +19,8 @@ def propose(agent,home,args):
     from work_ledger import load,save
     if getattr(agent,'depth',0) or getattr(agent,'hyperliquid_controller',None):h.problem('coordinator_only','La proposta interattiva è disponibile nella chat, non nei cicli H24.')
     try:args,_=x.normalize_execution_args(args);plan=x.parse_plan(args.get('plan'))
-    except (ValueError,TypeError) as exc:h.problem('invalid_trade_plan',str(exc),**getattr(exc,'details',{}))
+    except (ValueError,TypeError) as exc:x.invalid_plan(exc)
+    if plan.decision=='hold':return {'choice':'hold','decision':'hold','reason':plan.reason,'sent':False,'terminal':True}
     if plan.decision!='enter' or plan.trigger is not None:h.problem('entry_plan_required','Presenta un piano immediato completo; per livelli futuri usa il monitor.')
     from financial_focus import validate_plan
     validate_plan(agent,plan)
@@ -32,6 +33,12 @@ def propose(agent,home,args):
     if getattr(agent,'mode','ask')=='plan' or re.search(r'(?i)\b(?:solo analisi|sola analisi|analysis only|non inviare ordini|senza inviare ordini|do not (?:send|place|execute) orders)\b',source):
         return {'proposal':proposal,'profile':p['name'],'sent':False,'choice':'read_only','terminal':True}
     request=getattr(agent,'financial_request_id',None) or x.bind_request(agent,retry=getattr(agent,'financial_turn_retry',False))
+    from financial_allocation import size_plan, label as allocation_label
+    try:plan,allocation=size_plan(agent,home,p,plan)
+    except h.HLProblem as exc:
+        if exc.code=='allocation_cancelled':return {'choice':'cancelled','sent':False,'terminal':True}
+        raise
+    proposal['plan']=plan.to_dict()
     canonical=json.dumps(proposal,sort_keys=True)
     active=load(agent.session).get('financial_request') or {}
     revision=active.get('proposal_revision',0)
@@ -50,7 +57,7 @@ def propose(agent,home,args):
     if active.get('id')!=request:h.problem('proposal_context_changed','Richiesta cambiata: nessuna scelta o invio.')
     active['proposal_pending']=key;save(agent.session,data)
     label=(f"Proposta {p['network']} · {p['name']} · {plan.coin} {'LONG' if plan.side=='buy' else 'SHORT'}\n"
-           f"Quantità: {plan.size} {plan.coin} · leva: {plan.leverage}x · {args['order_kind']}\n"
+           f"Quantità: {plan.size} {plan.coin} · leva: {plan.leverage}x · {args['order_kind']}\n"+allocation_label(allocation)+
            f"Entry: {plan.entry} · TP: {plan.take_profit} · SL: {plan.stop_loss}\n"
            f"Slippage ingresso: {args.get('slippage_bps','n/a')} bps · TP/SL: {args['bracket_slippage_bps']} bps\nCome vuoi procedere?")
     answer=choose(agent,label,OPTIONS)
@@ -71,7 +78,7 @@ def propose(agent,home,args):
         if current is None:current={};agent.current_market_request=current
         current.update(confirmation,venue='hyperliquid',coin=plan.coin,execution_action='order',trading=True)
         from freellmapi import output
-        result=x.execute(agent,home,{**args,'profile':p['name']},output)
+        result=x.execute(agent,home,{**args,'plan':json.dumps(plan.to_dict()),'profile':p['name']},output)
     elif answer==OPTIONS[1]:
         data=load(agent.session);active=data.get('financial_request') or {}
         active['proposal_revision']=revision+1;save(agent.session,data)

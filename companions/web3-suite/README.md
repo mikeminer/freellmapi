@@ -13,7 +13,15 @@ clone or skill download is needed. Original licenses are retained.
 
 
 Current source additionally includes the 2026-11-16 execution reliability fixes
-and interactive trade proposal choices. The 0.1.1 installer predates these fixes.
+and interactive trade proposal choices. Model handoff now retains the current
+instrument and answered constraints; malformed proposal arguments receive one
+bounded format correction. Percentage sizing is calculated natively from verified
+available capital and asset precision, with one persisted margin/notional choice.
+Physical Seeker acceptance used real Gemini and Agnes responses: ETH, 25x, 50%,
+visible confirmation/refresh/cancel buttons, and cancellation without orders.
+304 regression tests passed. This covers those two reported models and the
+proposal workflow, not all models or live execution. The 0.1.1 installer predates
+these fixes.
 
 [English user guide](packaging/windows/USER_GUIDE.md) · [Build and verification](packaging/windows/README.md)
 

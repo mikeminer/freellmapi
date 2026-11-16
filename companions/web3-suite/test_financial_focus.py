@@ -57,6 +57,12 @@ class FinancialFocusTests(unittest.TestCase):
         self.bind()
         self.assertEqual(focus.response_issue({'content':'HYPE/USDC SHORT: entry 66, TP 65, SL 68'},self.agent.financial_focus),'response_coin_mismatch')
         self.assertIsNone(focus.response_issue({'content':'ETH resta il target; HYPE è solo un confronto storico.'},self.agent.financial_focus))
+    def test_numeric_string_leverage_is_a_format_error_not_lost_user_choice(self):
+        self.bind()
+        m={'tool_calls':[{'function':{'name':'hyperliquid_propose_plan','arguments':json.dumps({'coin':'ETH','leverage':'25'})}}]}
+        self.assertIsNone(focus.response_issue(m,self.agent.financial_focus))
+        m['tool_calls'][0]['function']['arguments']=json.dumps({'coin':'ETH','leverage':'5'})
+        self.assertEqual(focus.response_issue(m,self.agent.financial_focus),'request_leverage_mismatch')
     def test_short_followup_retains_eth_and_values_without_authorizing_an_order(self):
         self.bind();self.agent.messages.append({'role':'user','content':'sì'})
         r=intent('sì',self.agent.messages);self.assertEqual((r['venue'],r['coin']),('hyperliquid','ETH'))
@@ -64,6 +70,20 @@ class FinancialFocusTests(unittest.TestCase):
         self.assertEqual(f['constraints'],{'leverage':25,'capital_percent':'50'})
         from financial_completion import requirement
         self.assertIsNone(requirement('sì',r))
+    def test_repair_of_json_proposal_retains_financial_focus_but_code_repairs_do_not(self):
+        self.bind()
+        prompt='Correggi la forma JSON della proposta ETH gia preparata e mostrala con i pulsanti. Mantieni leva e quota di capitale gia indicate. Nessun invio automatico.'
+        r=intent(prompt,self.agent.messages)
+        self.assertEqual((r['venue'],r['coin']),('hyperliquid','ETH'))
+        again=focus.bind(self.agent,prompt,r)
+        self.assertEqual(again['constraints'],{'leverage':25,'capital_percent':'50'})
+        self.assertIsNone(intent('Correggi il bug nel codice della proposta ETH',self.agent.messages))
+        self.assertIsNone(intent('Implementa un tool per le proposte ETH',self.agent.messages))
+    def test_preview_followup_without_repeating_numbers_keeps_the_entire_focus(self):
+        self.bind()
+        prompt='Prepara ora la proposta ETH su Hyperliquid usando le scelte gia date e mostra anteprima con pulsanti. Nessun invio automatico.'
+        r=intent(prompt,self.agent.messages);self.assertEqual((r['venue'],r['coin']),('hyperliquid','ETH'))
+        self.assertEqual(focus.bind(self.agent,prompt,r)['constraints'],{'leverage':25,'capital_percent':'50'})
     def test_wrong_proposal_cannot_show_menu_or_reach_account_tools(self):
         self.bind()
         import hyperliquid_tools as h
@@ -96,6 +116,13 @@ class FinancialFocusTests(unittest.TestCase):
             with patch.object(a,'api',side_effect=[bad,bad if repeat else good]) as api,patch('market_routing.collect',return_value=[{'tool':'hyperliquid_analyze','arguments':{'coin':'ETH'},'result':{'coin':'ETH','data_ready':True}}]),patch.object(f,'ask_question',side_effect=AssertionError('No stale/repeated questions')),patch.object(f,'output'),redirect_stdout(io.StringIO()):
                 a.turn(PROMPT)
             self.assertEqual(api.call_count,2);self.assertEqual(a.turn_outcome,'incomplete' if repeat else 'completed')
+            for call in api.call_args_list:
+                payload=call.args[1]
+                systems='\n'.join(m['content'] for m in payload['messages'] if m.get('role')=='system')
+                self.assertNotIn('Optional memory consolidation is suspended',systems)
+                self.assertNotIn('No further tools, checkpoints',systems)
+                self.assertIn('hyperliquid_propose_plan',[t['function']['name'] for t in payload['tools']])
+                self.assertIn(PROMPT,[m.get('content') for m in payload['messages']])
             self.assertEqual(a.current_market_request['coin'],'ETH');self.assertEqual(a.financial_focus['constraints']['leverage'],25)
             self.assertIn('ETH',a.messages[-1]['content'])
 

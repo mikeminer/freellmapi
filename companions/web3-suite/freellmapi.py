@@ -1236,8 +1236,10 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             output(execution_blocker);self.messages.append({'role':'assistant','content':execution_blocker});self.save();self.turn_outcome='incomplete';return
         market_repairs=0
         financial_plan_repairs=0
+        financial_plan_repair_tool='hyperliquid_execute_plan'
         trade_proposal_repairs=0
         trade_proposal_required=False
+        explicit_proposal=bool(self.financial_focus and re.search(r'(?i)\b(?:pulsanti|buttons|frecce|menu)\b',prompt) and re.search(r'(?i)\b(?:proposta|piano|anteprima|preview|trade)\b',prompt) and not re.search(r'(?i)\b(?:solo analisi|sola analisi|analysis only|non inviare ordini|senza inviare ordini)\b',prompt))
         financial_scope_repairs=0
         checkpoint_answer_only=False
         checkpoint_answer_attempted=False
@@ -1301,7 +1303,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 projection=analysis_payload(payload,market_request)
                 if projection:self.phase_metrics.context_projection=projection
                 if financial_plan_repairs:
-                    recovery_tools={'hyperliquid_execute_plan','ask_user'}
+                    recovery_tools={financial_plan_repair_tool,'ask_user'}
                     if not any(e['tool']=='hyperliquid_analyze' and isinstance(e['result'],dict) and e['result'].get('data_ready') for e in market_evidence):recovery_tools.add('hyperliquid_analyze')
                     payload['tools']=[t for t in payload['tools'] if t['function']['name'] in recovery_tools]
                     payload['tool_choice']='required'
@@ -1314,12 +1316,16 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 payload['tool_choice']='none'
             if checkpoint_answer_only:
                 payload['tools']=[];payload['tool_choice']='none'
+                payload['messages'].append({'role':'system','content':'Optional memory consolidation is suspended. Complete ONLY the latest read-only market analysis from the native evidence already obtained. No further tools, checkpoints, orders or invented current state. Explain observed regimes, uncertainty and missing evidence. A memory error does not erase the successful market reads.'})
+            if explicit_proposal and not checkpoint_answer_only:
+                payload['tools']=[t for t in payload['tools'] if t['function']['name'] in ('hyperliquid_propose_plan','ask_user')]
+                payload['tool_choice']='required'
+                payload['messages'].append({'role':'system','content':'The user requested a native proposal menu. Current native account and asset analysis evidence is already supplied. Do not repeat account/market discovery. Call hyperliquid_propose_plan with its JSON-encoded plan object and sibling execution options, or structured HOLD with reason if the evidence is insufficient. ask_user is only for a genuinely missing user choice, never known leverage or allocation. No automatic execution.'})
             if trade_proposal_required:
                 payload['tool_choice']={'type':'function','function':{'name':'hyperliquid_propose_plan'}}
             if self.financial_focus:
                 from financial_focus import instruction as financial_focus_instruction
                 payload['messages'].append({'role':'system','content':financial_focus_instruction(self.financial_focus)})
-                payload['messages'].append({'role':'system','content':'Optional memory consolidation is suspended. Complete ONLY the latest read-only market analysis from the native evidence already obtained. No further tools, checkpoints, orders or invented current state. Explain observed regimes, uncertainty and missing evidence. A memory error does not erase the successful market reads.'})
             if getattr(self,'hyperliquid_controller',None):
                 import hyperliquid_tools
                 payload['tools']=[t for t in payload['tools'] if t['function']['name'] in hyperliquid_tools.NAMES-{'hyperliquid_select','hyperliquid_panel'}]
@@ -1418,6 +1424,10 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             message = {k:v for k,v in message.items() if k in ('role','content','tool_calls','reasoning_content')}
             from financial_focus import response_issue as financial_focus_issue,instruction as financial_focus_instruction
             scope_issue=financial_focus_issue(message,self.financial_focus)
+            if self.financial_focus:
+                offered={t['function']['name'] for t in payload.get('tools',[])}
+                unavailable=[c.get('function',{}).get('name','') for c in message.get('tool_calls',[]) if c.get('function',{}).get('name','').startswith('hyperliquid_') and c['function']['name'] not in offered]
+                if unavailable:scope_issue='financial_tool_not_offered: '+', '.join(unavailable)+'. Available tools: '+', '.join(sorted(offered))
             if scope_issue:
                 if not financial_scope_repairs:
                     financial_scope_repairs=1
@@ -1684,6 +1694,13 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 if function['name']=='hyperliquid_execute_plan' and failed:
                     from secret_output import redact
                     result=json.dumps({'ok':False,'code':'execution_tool_failed','message':redact(str(result))[:1000],'sent':None,'terminal':True})
+                if function['name']=='hyperliquid_propose_plan' and failed and str(result).startswith('Errore: invalid_arguments:'):
+                    # Schema validation happens before dispatch, menus or side
+                    # effects. Only this provably pre-dispatch failure is safe
+                    # to correct once; arbitrary exceptions are not no-send proof.
+                    from hyperliquid_execution import plan_contract
+                    result=json.dumps({'ok':False,'code':'invalid_trade_plan','message':str(result)[:1500],
+                        'sent':False,'terminal':True,'plan_contract':plan_contract()})
                 ui.result(function['name'], result, time.monotonic()-started)
                 from hyperliquid_tools import NAMES as financial_native_tools
                 if function['name']=='market_snapshot' or function['name'] in financial_native_tools:
@@ -1745,19 +1762,24 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                     output('Recupero modifica: riletto '+path+'. Il modello deve usare il contenuto attuale.')
                 except OSError: pass
             self.save()
-            proposal_end=next((e['result'] for e in reversed(market_evidence) if e['tool']=='hyperliquid_propose_plan' and isinstance(e['result'],dict) and e['result'].get('choice') in ('cancelled','read_only') and e['result'].get('terminal')),None)
+            proposal_end=next((e['result'] for e in reversed(market_evidence) if e['tool']=='hyperliquid_propose_plan' and isinstance(e['result'],dict) and e['result'].get('choice') in ('cancelled','read_only','hold') and e['result'].get('terminal')),None)
             if proposal_end:
                 text='Proposta annullata. Nessun ordine inviato.' if proposal_end['choice']=='cancelled' else 'Proposta mantenuta in sola lettura. Nessun ordine inviato.'
+                if proposal_end['choice']=='hold':text='HOLD · '+proposal_end['reason']+'\nNessun ordine inviato.'
                 self.messages.append({'role':'assistant','content':text});self.save();output(text);self.turn_outcome='completed';return
             terminal_execution=any(e['tool'] in ('hyperliquid_execute_plan','hyperliquid_propose_plan') and isinstance(e['result'],dict) and e['result'].get('terminal') for e in market_evidence)
-            latest_compound=next((e['result'] for e in reversed(market_evidence) if e['tool']=='hyperliquid_execute_plan' and isinstance(e['result'],dict)),None)
+            latest_compound_entry=next((e for e in reversed(market_evidence) if e['tool'] in ('hyperliquid_execute_plan','hyperliquid_propose_plan') and isinstance(e['result'],dict)),None)
+            latest_compound=latest_compound_entry['result'] if latest_compound_entry else None
+            repair_proposal=bool(latest_compound_entry and latest_compound_entry['tool']=='hyperliquid_propose_plan')
             from financial_completion import delegated_signal
-            if terminal_execution and not financial_plan_repairs and delegated_signal(prompt) and latest_compound and latest_compound.get('code')=='invalid_trade_plan' and latest_compound.get('sent') is False:
+            if terminal_execution and not financial_plan_repairs and (repair_proposal or delegated_signal(prompt)) and latest_compound and latest_compound.get('code')=='invalid_trade_plan' and latest_compound.get('sent') is False:
                 # Parsing failed before any durable plan claim, preview, review
                 # or signature. A sole correction is safe; never do this after
                 # preparation, authorization, rejection or unknown effects.
                 financial_plan_repairs=1
-                self.messages.append({'role':'system','content':'The plan parser rejected the draft BEFORE preparation or signing. Correct its typed fields ONCE using the existing native evidence, or return explicit HOLD if no justified plan exists. Long requires SL < entry < TP; short TP < entry < SL, and levels must fit the current market and costs. Preserve any exact user constraints; do not change scope, authority or budget. Use hyperliquid_execute_plan or ask_user only for a genuinely missing user constraint. No additional retries after this correction.'})
+                financial_plan_repair_tool='hyperliquid_propose_plan' if repair_proposal else 'hyperliquid_execute_plan'
+                trade_proposal_required=repair_proposal
+                self.messages.append({'role':'system','content':'The plan parser rejected the draft BEFORE preparation or signing. Correct its typed fields ONCE using the existing native evidence, or return explicit HOLD if no justified plan exists. Long requires SL < entry < TP; short TP < entry < SL, and levels must fit the current market and costs. Preserve exact user constraints and prior answers; do not change scope, authority or budget. Use '+financial_plan_repair_tool+' (NOT another financial action), or ask_user only for a genuinely missing constraint. No additional retries after this correction. Contract: '+json.dumps(latest_compound.get('plan_contract',{}))})
                 self.save();output('Piano non valido prima di qualsiasi invio: una sola correzione strutturata, oppure HOLD.');continue
             if terminal_execution and not (completion_request and completion_request.get('execution_action')):
                 completion_request={**(completion_request or {}),'venue':'hyperliquid','execution_action':'order'}
@@ -2168,9 +2190,14 @@ def _main():
                 for m in catalog: output(m['id'])
                 continue
             if prompt == '/model' or prompt.startswith('/model '):
-                try: catalog=agent.api('models')['data']
-                except Exception as e: output('Aggiornamento catalogo non riuscito; uso quello precedente. '+str(e))
-                candidate = prompt[7:].strip() or select_model(catalog, agent.model)
+                candidate=prompt[7:].strip()
+                # The phone/desktop picker already selected from this catalog.
+                # A known explicit choice needs no extra blocking catalog call;
+                # the next inference still checks actual provider availability.
+                if not candidate or candidate not in {m['id'] for m in catalog}|{'auto:fast','auto:smart','auto:reliable','auto:balanced'}:
+                    try: catalog=agent.api('models')['data']
+                    except Exception as e: output('Aggiornamento catalogo non riuscito; uso quello precedente. '+str(e))
+                candidate = candidate or select_model(catalog, agent.model)
                 if not chat_model({'id':candidate}): output('Questo modello non supporta chat: scegli un modello conversazionale.'); continue
                 if candidate not in [m['id'] for m in catalog] and candidate not in ('auto:fast','auto:smart','auto:reliable','auto:balanced'):
                     output('Modello sconosciuto.'); continue
