@@ -1,7 +1,15 @@
 """Stage official CPython NuGet tools, including venv, and wheel dependencies."""
-import argparse,json,subprocess,sys,zipfile
+import argparse,json,shutil,subprocess,sys,zipfile
 from pathlib import Path
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
+
+def prune_nonruntime_fixtures(runtime):
+    """The wheel's optional public self-tests contain example private keys."""
+    runtime=Path(runtime).resolve(strict=True)
+    target=(runtime/'Lib/site-packages/Crypto/SelfTest').resolve()
+    if not target.is_relative_to(runtime) or target==runtime:raise ValueError('Invalid fixture removal target')
+    if target.exists():shutil.rmtree(target)
+    return ['Crypto/SelfTest: optional public cryptographic fixtures, not runtime code']
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -23,5 +31,6 @@ def main():
     subprocess.run([sys.executable,'-m','pip','install','--target',str(runtime/'Lib/site-packages'),
                     '--only-binary=:all:','--no-compile','--platform','win_amd64','--python-version','3.13',
                     '--implementation','cp','--abi','cp313','-r',str(requirements)],check=True)
+    print(json.dumps({'nonruntime_dependency_fixtures_omitted':prune_nonruntime_fixtures(runtime)}))
 
 if __name__=='__main__':main()

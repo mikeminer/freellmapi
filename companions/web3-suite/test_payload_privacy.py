@@ -20,5 +20,14 @@ class PayloadPrivacyTests(unittest.TestCase):
             p=Path(tmp);(p/'source.py').write_text('token = load_user_credential()')
             (p/'certificate.pem').write_text('-----BEGIN CERTIFICATE-----\nPUBLIC-TEST\n-----END CERTIFICATE-----')
             self.assertEqual(audit.audit(p)['status'],'PASS')
+    def test_runtime_pruning_omits_public_private_key_fixtures_and_preserves_library(self):
+        spec=importlib.util.spec_from_file_location('prepare_private_runtime',Path(__file__).parent/'packaging/windows/prepare_runtime.py')
+        runtime=importlib.util.module_from_spec(spec);spec.loader.exec_module(runtime)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);tests=root/'Lib/site-packages/Crypto/SelfTest';tests.mkdir(parents=True)
+            (tests/'example.py').write_text('Public synthetic cryptographic fixture')
+            library=tests.parent/'Cipher';library.mkdir();(library/'__init__.py').write_text('Runtime library')
+            runtime.prune_nonruntime_fixtures(root)
+            self.assertFalse(tests.exists());self.assertTrue((library/'__init__.py').exists())
 
 if __name__=='__main__':unittest.main()

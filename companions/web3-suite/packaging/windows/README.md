@@ -48,6 +48,10 @@ Browser downloads keep TLS validation enabled and use Windows trusted CAs.
 SDK install scripts do not run. The Pump SDK's official CommonJS exports avoid
 its ESM/Anchor BN interop failure.
 
+The optional `Crypto/SelfTest` directory is omitted from the private runtime:
+its public example private keys are test fixtures, not required library code.
+Cryptographic runtime modules and their license notices remain included.
+
 The Android APK must exist at mobile/build/freellmapi-remote.apk. This release
 includes the existing debug-signed personal-use build; replacing it requires
 Android SDK/JDK and a compatible signing certificate. Private signing keys,

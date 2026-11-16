@@ -17,15 +17,17 @@ def audit(payload,needles=()):
         if file.name.lower() in STATE_NAMES or file.suffix.lower() in SECRET_SUFFIXES or name.lower()=='agent/config.json':
             findings.append({'file':name,'kind':'personal_state_or_signer_file'});continue
         overlap=max([len(v) for v in encoded] or [1]);tail=b'';matched=False
+        text_bytes=bytearray() if file.suffix.lower() in TEXT_SUFFIXES and file.stat().st_size<20_000_000 else None
         with file.open('rb') as stream:
             while chunk:=stream.read(4*1024*1024):
+                if text_bytes is not None:text_bytes.extend(chunk)
                 combined=tail+chunk
                 if any(value in combined for value in encoded):matched=True;break
                 tail=combined[-overlap:]
         if matched:findings.append({'file':name,'kind':'private_identifier_match'})
-        if file.suffix.lower() in TEXT_SUFFIXES and file.stat().st_size<20_000_000:
-            text=file.read_text(encoding='utf-8',errors='replace')
-            if re.search(r'(?m)^-----BEGIN (?:RSA |EC |ENCRYPTED |OPENSSH )?PRIVATE KEY-----\s*$',text):
+        if text_bytes is not None:
+            text=text_bytes.decode('utf-8',errors='replace')
+            if re.search(r'(?m)^\s*-----BEGIN (?:RSA |EC |ENCRYPTED |OPENSSH )?PRIVATE KEY-----\s*$',text):
                 findings.append({'file':name,'kind':'private_key_material'})
     return {'status':'PASS' if not findings else 'FAIL','files_scanned':count,'bytes_scanned':size,
             'private_identifier_needles':len(needles),'findings':findings,

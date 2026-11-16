@@ -13,6 +13,8 @@
   Known explicit model choices reuse the catalog instead of blocking on a reload.
 - Include the new allocation module and verify installed source hashes against a
   clean Git export. Add private-state/identifier scanning before publication.
+- Omit optional public PyCryptodome self-tests containing example private keys;
+  keep the runtime cryptography and license notices intact.
 - Preserve the private Python runtime, official router, Tailscale prerequisite,
   complete 894-file DevFridge Game Builder package and existing Android APK.
 
