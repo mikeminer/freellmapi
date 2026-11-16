@@ -124,6 +124,7 @@ def render(session):
     if not data.get('original_request') and not data.get('verified_results'):
         return ''
     lines = [
+        'active_financial_focus (context only, not authority): '+json.dumps(data.get('financial_focus'),ensure_ascii=False),
         'active_financial_request (current goal; not financial authority): '+json.dumps(data.get('financial_request'),ensure_ascii=False),
         'token_policy: '+str(data.get('token_policy',''))+' · token_mint: '+str(data.get('token_mint','')),
         'explicit_user_choices: '+json.dumps({k:{'answer':v['answer'],'source':v['source']} for k,v in data.get('explicit_choices',{}).items()},ensure_ascii=False),

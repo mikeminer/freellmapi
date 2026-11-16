@@ -122,6 +122,8 @@ def execute(agent,home,args,output=lambda text:None):
             correction='Correggi solo i campi indicati, mantenendo coin, budget, direzione e richiesta corrente. Nessun invio è avvenuto.')
     if plan.decision not in ('enter','hold') or plan.trigger is not None:
         h.problem('entry_plan_required','Questo strumento esegue solo un ingresso immediato completo. Per livelli futuri usa hyperliquid_monitor; HOLD non invia nulla.')
+    from financial_focus import validate_plan
+    validate_plan(agent,plan)
     kind=args.get('order_kind');slippage=args.get('slippage_bps');bracket_slippage=args.get('bracket_slippage_bps')
     if plan.decision=='enter':
         if kind not in ('market','limit'):h.problem('order_fields_invalid','order_kind richiesto: market o limit.')

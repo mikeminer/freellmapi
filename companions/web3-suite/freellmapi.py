@@ -687,6 +687,9 @@ class Agent:
             self.android_build_attempted=True
             return json.dumps(build(self,a['path'],HOME),ensure_ascii=False)
         if name=='ask_user':
+            from financial_focus import question_result
+            resolved_financial=question_result(self,a.get('question',''),a.get('options') or [])
+            if resolved_financial:return json.dumps(resolved_financial,ensure_ascii=False)
             question,options=salvage_question(a.get('question'),a.get('options'))
             from work_ledger import load as load_choices
             from request_choices import extract, resolve
@@ -1068,6 +1071,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
         self.financial_turn_started_at=time.time()
         self.financial_turn_retry=retry
         self.current_market_request=None
+        self.financial_focus=None
         self.current_account_state=None
         self.key_only_plan=None
         self.financial_request_id=None
@@ -1209,6 +1213,8 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
         from market_routing import intent as market_intent,collect as collect_market,response_issue as market_response_issue,context_note as market_context_note,fallback as market_fallback,has_data as has_market_data
         market_request=dict(native_market) if native_market and not self.depth and not getattr(self,'hyperliquid_controller',None) else None
         self.current_market_request=market_request
+        from financial_focus import bind as bind_financial_focus
+        self.financial_focus=bind_financial_focus(self,prompt,market_request)
         if market_request:
             from financial_completion import requirement
             market_request['execution_action']='order' if financial_confirmation else requirement(prompt,market_request)
@@ -1232,6 +1238,7 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
         financial_plan_repairs=0
         trade_proposal_repairs=0
         trade_proposal_required=False
+        financial_scope_repairs=0
         checkpoint_answer_only=False
         checkpoint_answer_attempted=False
         import current_information
@@ -1309,6 +1316,9 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
                 payload['tools']=[];payload['tool_choice']='none'
             if trade_proposal_required:
                 payload['tool_choice']={'type':'function','function':{'name':'hyperliquid_propose_plan'}}
+            if self.financial_focus:
+                from financial_focus import instruction as financial_focus_instruction
+                payload['messages'].append({'role':'system','content':financial_focus_instruction(self.financial_focus)})
                 payload['messages'].append({'role':'system','content':'Optional memory consolidation is suspended. Complete ONLY the latest read-only market analysis from the native evidence already obtained. No further tools, checkpoints, orders or invented current state. Explain observed regimes, uncertainty and missing evidence. A memory error does not erase the successful market reads.'})
             if getattr(self,'hyperliquid_controller',None):
                 import hyperliquid_tools
@@ -1406,6 +1416,15 @@ Respect shared task budgets; when stopped save/report progress and unresolved it
             ui.response_info(self.model, response, self.last_request)
             message = reliable_runtime.validate_message(response['choices'][0]['message'])
             message = {k:v for k,v in message.items() if k in ('role','content','tool_calls','reasoning_content')}
+            from financial_focus import response_issue as financial_focus_issue,instruction as financial_focus_instruction
+            scope_issue=financial_focus_issue(message,self.financial_focus)
+            if scope_issue:
+                if not financial_scope_repairs:
+                    financial_scope_repairs=1
+                    self.messages.append({'role':'system','content':'Previous draft rejected before any tool/question: '+scope_issue+'. '+financial_focus_instruction(self.financial_focus)+' Correct once using current native data. Do not repeat the stale question or change coin; no execution authority is added.'})
+                    self.save();continue
+                text='Richiesta attiva: '+self.financial_focus['coin']+' · '+json.dumps(self.financial_focus['constraints'],ensure_ascii=False)+'. Il modello continua a usare un contesto o una domanda errati: risposta fermata. Nessun ordine inviato; contesto conservato.'
+                self.messages.append({'role':'assistant','content':text});self.save();output(text);self.turn_outcome='incomplete';return
             if trade_proposal_required:
                 trade_proposal_required=False
                 proposals=[c for c in message.get('tool_calls',[]) if c.get('function',{}).get('name') in ('hyperliquid_propose_plan','hyperliquid_execute_plan')]

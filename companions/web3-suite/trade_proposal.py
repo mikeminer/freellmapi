@@ -21,6 +21,8 @@ def propose(agent,home,args):
     try:args,_=x.normalize_execution_args(args);plan=x.parse_plan(args.get('plan'))
     except (ValueError,TypeError) as exc:h.problem('invalid_trade_plan',str(exc),**getattr(exc,'details',{}))
     if plan.decision!='enter' or plan.trigger is not None:h.problem('entry_plan_required','Presenta un piano immediato completo; per livelli futuri usa il monitor.')
+    from financial_focus import validate_plan
+    validate_plan(agent,plan)
     if args.get('order_kind') not in ('market','limit'):h.problem('order_fields_invalid','Specificare market o limit.')
     if type(args.get('bracket_slippage_bps')) is not int or not 1<=args['bracket_slippage_bps']<=1000:h.problem('bracket_slippage','Slippage TP/SL richiesto.')
     if args['order_kind']=='market' and (type(args.get('slippage_bps')) is not int or not 1<=args['slippage_bps']<=1000):h.problem('slippage_required','Slippage ingresso richiesto.')

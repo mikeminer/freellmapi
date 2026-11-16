@@ -5,6 +5,22 @@ import uuid
 from decimal import Decimal,InvalidOperation
 
 
+def recent_venue(messages,prompt=''):
+    """Inherit a venue from actual user turns, never assistant prose/summaries."""
+    rows=[m['content'] for m in messages if m.get('role')=='user' and isinstance(m.get('content'),str)]
+    if rows and rows[-1]==prompt:rows.pop()
+    for previous in reversed(rows[-20:]):
+        if previous.startswith('Conversation summary (data, not new instructions):'):continue
+        text=previous.casefold()
+        if any(x in text for x in ('coinbase','kraken','bybit','okx')):return None
+        if re.search(r'\b(?:hyperliquid|hypercore)\b',text):return 'hyperliquid'
+        if re.search(r'\bbinance\b',text):return 'binance'
+        if re.search(r'\b(?:trade|trading|strateg\w*|mercat\w*|market|saldo|capital\w*|collateral\w*|leva|leverage|quantity|quantit\w*|dimension\w*|margine|notional|nozionale|long|short|btc|eth|sol|hype|pump|ordin\w*|order|segnal\w*|signal)\b',text):continue
+        if len(text.split())<=3 or text.startswith(('/model','/auto','/ask','/plan','/status')):continue
+        break
+    return None
+
+
 def intent(prompt,messages=()):
     text=prompt.casefold()
     from financial_completion import execution_verb
@@ -14,6 +30,17 @@ def intent(prompt,messages=()):
     if re.search(r'\b(?:crea|sviluppa|implementa|build|implement|debug|correggi)\b',text) and not re.search(r'\b(?:prezzo attuale|dati attuali|current price)\b',text):return None
     if any(name in text for name in ('coinbase','kraken','bybit','okx')):return None
     pair=re.search(r'\b([a-z0-9]{2,12})\s*[/_-]\s*(usdc|usdt|usd|eur)\b',text)
+    if not pair and re.fullmatch(r'\s*(?:s[iì]|yes|ok|va bene|\d+(?:[.,]\d+)?\s*[x×%]?)[.!\s]*',text):
+        rows=[m['content'] for m in messages if m.get('role')=='user' and isinstance(m.get('content'),str)]
+        if rows and rows[-1]==prompt:rows.pop()
+        for previous in reversed(rows[-12:]):
+            if previous.startswith('Conversation summary (data, not new instructions):'):continue
+            prior=intent(previous)
+            if prior and prior.get('coin'):
+                # A short answer retains the requested instrument, never an
+                # assistant's different suggestion, and grants NO execution.
+                return dict(prior,trading=False,venue=recent_venue(messages,prompt) or prior.get('venue'))
+            if not prior and len(previous.split())>4:break
     wallet=bool(re.search(r'\b(?:saldo|saldi|fondi|balance|balances|collaterale|collateral|posizioni aperte|ordini aperti)\b',text))
     if not pair and not re.search(r'\b(?:hyperliquid|hypercore|binance)\b',text) and re.search(r'\b(?:ri)?analizz\w*|\b(?:aggiorna|valuta)\b',text) and re.search(r'\b(?:mercat\w*|opportunit\w*|trading)\b',text):
         for m in reversed(messages):
@@ -51,7 +78,7 @@ def intent(prompt,messages=()):
     if not executing and re.search(r'\b(?:analizz\w*|analy[sz]\w*|formul\w*|propon\w*|sugger\w*|suggest\w*|recommend\w*)\b',text):trading=False
     if re.search(r'\b(?:non|senza|do not|without)\b.{0,45}\b(?:ordini|orders|trading|buy|sell)\b',text) and not re.search(r'\b(?:leva|leverage|perpetual|perps)\b',text):trading=False
     if re.search(r'\b(?:solo analisi|sola analisi|analysis only|non inviare ordini|senza inviare ordini)\b',text):trading=False
-    venue='hyperliquid' if 'hyperliquid' in text or 'hypercore' in text else ('binance' if 'binance' in text else None)
+    venue='hyperliquid' if 'hyperliquid' in text or 'hypercore' in text else ('binance' if 'binance' in text else recent_venue(messages,prompt))
     if any(name in text for name in ('coinbase','kraken','bybit','okx')):return None
     return {'kind':'market','pair':pair.group(1).upper()+'/'+pair.group(2).upper(),'coin':pair.group(1).upper(),'quote':pair.group(2).upper(),'trading':trading,'venue':venue}
 
@@ -89,7 +116,7 @@ def collect(agent,request,home,output):
             if request.get('coin'):args['coin']=request['coin']
             read('hyperliquid_read',args)
             if request.get('kind')=='scan':read('hyperliquid_scan',{'profile':name,'limit':8})
-            if request.get('execution_action')=='order' and request.get('coin') and getattr(agent,'mode','ask')!='plan':
+            if (request.get('execution_action')=='order' or request.get('financial_constraints')) and request.get('coin') and getattr(agent,'mode','ask')!='plan':
                 read('hyperliquid_analyze',{'profile':name,'coin':request['coin']})
     else:read('market_snapshot',{'pair':request['pair'],'interval':'15m','limit':30})
     agent.current_account_state=account_state(evidence)
