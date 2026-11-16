@@ -1,0 +1,13 @@
+# Base agent dependencies. Windows uses packaging/windows/requirements-suite.lock.
+rich==14.3.3
+playwright==1.58.0
+Pillow==11.3.0
+websocket-client==1.9.0
+jsonschema==4.25.1
+PyMuPDF==1.28.0
+prompt_toolkit==3.0.53
+hyperliquid-python-sdk==0.24.0
+eth-account==0.13.7
+truststore==0.10.4
+cryptography==45.0.5
+qrcode==8.2
