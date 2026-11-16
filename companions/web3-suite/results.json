@@ -1,15 +1,28 @@
 {
   "status": "PASS_WITH_LIMITATIONS",
-  "installer_sha256": "b4933f39a8cd355a56926924e89b22e0dfc3f3f4f0a29d0087db9c8b508dd77d",
-  "version": "0.1.1",
-  "upgrade_from": "0.1.0",
+  "installer_sha256": "bb4dca74f4e4cf48eed11297d91d1a917c81911210bf9f33fda05a02b41562f2",
+  "installed_source_files_verified": 467,
+  "source_commit": "6b6c8a91bd63bad8e22f53f1f608008412e10b7c",
+  "installed_regressions": {
+    "status": "PASS",
+    "tests": 386,
+    "unique_cases": 386,
+    "failures": [],
+    "errors": [],
+    "skipped": 0,
+    "outbound_connections_blocked": 0,
+    "private_python": true,
+    "scope": "Installed sources and runtime; isolated unit fixtures and localhost HTTP only. Financial transports are mocks, not live order acceptance."
+  },
+  "version": "0.1.2",
+  "upgrade_from": "0.1.1",
   "bundled_skill_registered_by_setup": true,
   "bundled_skill_full_hashes_verified": 894,
   "bundled_skill_version": "1.12.0",
   "offline_skill_read_and_desktop_entry_verified": true,
   "idempotent_registration": true,
   "existing_config_key_sessions_custom_skill_preserved": true,
-  "installer_size": 888899440,
+  "installer_size": 887536814,
   "exact_exe_installed": true,
   "path_with_spaces": true,
   "no_system_python_on_test_PATH": true,
@@ -26,7 +39,8 @@
       "powershell": "v7.7.0",
       "git": "v2.56.1.windows.1",
       "adb": "platform-tools-latest",
-      "vcredist": "2015-2022"
+      "vcredist": "2015-2022",
+      "tcltk": "CPython 3.13.17 Tcl/Tk"
     },
     "bundled_skills": [
       {
@@ -36,6 +50,8 @@
       }
     ],
     "bundled_registration_verified": true,
+    "private_tcltk_verified": true,
+    "tcl_version": "8.6.15",
     "scope": "offline imports, skill integrity and temporary registry; no model, wallet or trading call"
   },
   "venv_created_and_executed": true,
@@ -59,46 +75,75 @@
   "scratch_install_uninstalled": true,
   "uninstall_removed_only_managed_skill_registration": true,
   "user_data_preserved_after_uninstall": true,
-  "unit_tests": {
-    "unique_cases": 114,
-    "runs": [
-      {
-        "runtime": "host Python 3.12",
-        "passed": 114,
-        "seconds": 25.288
+  "fresh_program_install": true,
+  "fresh_empty_profile_no_credentials_generated": true,
+  "fresh_bundled_registration_verified": true,
+  "fresh_private_python_doctor": true,
+  "fresh_scratch_uninstalled": true,
+  "payload_privacy_audit": {
+    "status": "PASS",
+    "files_scanned": 45574,
+    "bytes_scanned": 3260796940,
+    "private_identifier_needles": 8,
+    "findings": [],
+    "scope": "Distributable files; source comes from tracked Git export. Public third-party licenses and synthetic tests remain included.",
+    "verified_delta_after_full_scan": {
+      "status": "PASS",
+      "files": [
+        "agent/requirements.txt",
+        "source-files.json",
+        "suite-manifest.json"
+      ],
+      "sha256": {
+        "agent/requirements.txt": "199263e68d5198dd0137481c852ea460a0d308769d5fc9f5691a95512778f5e0",
+        "source-files.json": "640430ae2ab0c1f205d36392a19bee9db10d61a863f592708740527c88f46872",
+        "suite-manifest.json": "d16abd0a749733d9e78a2b65b3efc8df1a6265d195893f1355aebe5285a69967"
       },
-      {
-        "runtime": "bundled Python 3.13",
-        "passed": 114,
-        "seconds": 26.831
-      }
-    ]
-  },
-  "devfridge_helper_tests_passed": 40,
-  "devfridge_helpers_scope": "Copied temporary package, included Node/Python, synthetic fixtures; no game or chain operation",
-  "bundled_skill_source_commit": "bb8668f2bf838fde3f42288cc827432c9125ad78",
-  "bundled_skill_tree_sha": "430fda812dd5ddbc73e63ad3173080b127b6eb98",
-  "bundled_skill_bytes": 8662636,
-  "skill_scripts_or_hooks_run_by_installation": false,
-  "rejected_draft_artifact": {
-    "sha256": "6439f47daadbb8e354b217c64cd61b463bd23cec073cd189dfd452796c5f27dc",
-    "published": false,
-    "missing_files": [
-      "vendor/gamedev-skills/router/SKILL.md",
-      "vendor/gamedev-skills/router/agents/openai.yaml",
-      "vendor/gamedev-skills/router/references/engine-detection.md",
-      "vendor/gamedev-skills/router/references/routing-table.md"
-    ],
-    "postinstall_registration_exit_code": 1,
-    "fix": "Anchor Inno router/prerequisites exclusions at the payload root so nested skill router folders remain included"
-  },
-  "earlier_qa_failures": [
-    {
-      "destination": "Documents-based scratch program directory",
-      "error": "Windows DeleteFile access denied (5) replacing requirements-audio.txt; also reproduced by the old 0.1.0 installer",
-      "inspection": "File was not read-only; no Restart Manager holder found; native Python rename/delete probes succeeded",
-      "resolution": "Final acceptance run used isolated LocalAppData Temp storage, like the per-user installation location",
-      "underlying_windows_denial_cause_verified": false
+      "new_source_commit": "6b6c8a91bd63bad8e22f53f1f608008412e10b7c",
+      "reason": "One public base requirements file added; remaining staged first-party sources hash-matched to the new tracked export and dependencies were unchanged."
     }
-  ]
+  },
+  "initial_payload_rejected_for_public_crypto_fixture": [
+    {
+      "file": "runtime/python/Lib/site-packages/Crypto/SelfTest/PublicKey/test_import_DSA.py",
+      "kind": "private_key_material"
+    }
+  ],
+  "optional_public_crypto_selftests_omitted": true,
+  "rejected_installer_candidates": [
+    {
+      "sha256": "26d58b78d501baf346f98bd9c6fc58b74883be53a0d46da1d21df3253eee940a",
+      "tests": 384,
+      "errors": 4,
+      "cause": "One connector import failed because NuGet excludes tkinter; three resource tests used the wrong working directory. Both were corrected before recompiling.",
+      "published": false
+    }
+  ],
+  "real_profile_check": {
+    "encrypted_credentials_settings_and_pairing_unchanged": true,
+    "session_files_changed_during_build": 0,
+    "scope": "Hash comparison only; no personal file contents are published."
+  },
+  "private_dependency_check": "PASS",
+  "release_date": "2026-11-16",
+  "release_timezone": "Europe/Rome",
+  "artifact": "FREELLMAPI-Web3-Suite-Setup-0.1.2.exe",
+  "components": {
+    "python": "3.13.17",
+    "router": "v0.16.30",
+    "tailscale": "1.104.7",
+    "inno": "is-7_1_1",
+    "node": "v22.23.5",
+    "powershell": "v7.7.0",
+    "git": "v2.56.1.windows.1",
+    "adb": "platform-tools-latest",
+    "vcredist": "2015-2022",
+    "tcltk": "CPython 3.13.17 Tcl/Tk"
+  },
+  "chromium": {
+    "revision": "1208",
+    "version": "145.0.7632.6"
+  },
+  "official_icon_verified": true,
+  "source_files_manifest_sha256": "640430ae2ab0c1f205d36392a19bee9db10d61a863f592708740527c88f46872"
 }

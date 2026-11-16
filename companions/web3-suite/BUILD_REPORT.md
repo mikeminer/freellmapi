@@ -1,102 +1,93 @@
-# FREELLMAPI Web3 Suite 0.1.1 — build and acceptance report
+# FREELLMAPI Web3 Suite 0.1.2 — build and acceptance report
 
-Result: **PASS WITH LIMITATIONS**, Windows x64 preview, 2026-11-15.
-Source: https://github.com/mikeminer/freellmapi/tree/web3-suite/companions/web3-suite
+Result: **PASS WITH LIMITATIONS**, Windows x64 preview, 2026-11-16 (Europe/Rome).
+Source: https://github.com/mikeminer/freellmapi/tree/6b6c8a91bd63bad8e22f53f1f608008412e10b7c/companions/web3-suite
 
 ## Tested artifact
 
-- Filename: FREELLMAPI-Web3-Suite-Setup-0.1.1.exe
-- Size: 888,899,440 bytes.
-- SHA-256: `b4933f39a8cd355a56926924e89b22e0dfc3f3f4f0a29d0087db9c8b508dd77d`.
-- Compiled with Inno Setup 7.1.1, LZMA2 normal compression, four block threads.
-- The exact EXE was installed over 0.1.0 in an isolated directory with spaces.
-  All installed-file checks used that extracted installation, not just staging.
-- The installer is unsigned. It is a preview, not clean-VM certification.
+- File: `FREELLMAPI-Web3-Suite-Setup-0.1.2.exe`
+- Size: 887,536,814 bytes.
+- SHA-256: `bb4dca74f4e4cf48eed11297d91d1a917c81911210bf9f33fda05a02b41562f2`.
+- Inno Setup 7.1.1; official icon verified at 16, 32, 48, 64, 128 and 256 pixels.
+- The exact compiled EXE was tested as an update from 0.1.1 and as a fresh
+  program installation with an empty application profile, in directories with spaces.
+- The installer is unsigned. This is a preview, not a certified clean-Windows-VM run.
 
-## Complete DevFridge Game Builder
+## Included fixes and components
 
-Version **1.12.0**, **894 original files**, **8,662,636 bytes**.
-Source: https://github.com/mikeminer/devfridge/tree/bb8668f2bf838fde3f42288cc827432c9125ad78/skills/devfridge-game-builder
-Git tree: `430fda812dd5ddbc73e63ad3173080b127b6eb98`.
+The suite includes the latest current-instrument/model-handoff context fixes,
+native trade proposal buttons, one bounded malformed-plan correction and native
+percentage allocation with a persisted margin/notional choice. The required
+allocation module is present and checked after extraction.
 
-Every original Git blob was copied, including references, assets, scripts,
-hidden configuration, vendored workflows and license files. The source Git
-blob hashes and per-file SHA-256 hashes are recorded in bundled-skills.json.
-The installed package passed verification of all 894 hashes and the exact
-file set. The parent repository's Business Source License 1.1 is also included
-as licenses/DevFridge-BUSL-1.1.txt; vendored licenses remain in their folders.
+Private CPython 3.13.17 with pip/venv and verified private
+Tcl/Tk 8.6.15 for wallet panels, official unmodified
+FreeLLMAPI router v0.16.30, Tailscale 1.104.7
+MSI, Node v22.23.5, PowerShell v7.7.0,
+MinGit v2.56.1.windows.1, Android platform tools, Chromium
+145.0.7632.6 (revision 1208), Qt/PySide and
+Web3 SDK dependencies are included. The Android APK is unchanged from 0.1.1.
 
-Setup automatically created the managed registration before any Skills object
-was constructed by QA. Offline loading and a support-file read passed. The
-desktop's DevFridge action selected the registered package without a download
-or model request. CMD and Remote use the same shared Skills registration.
-Reopening was idempotent. Existing manually linked DevFridge packages remain
-preferred by the desktop entry point. Installation executes no skill scripts
-or hooks and does not start a game build or financial operation.
+The complete DevFridge Game Builder 1.12.0 package contains all **894 original
+Git blobs**, references, scripts, assets, hidden support files and vendored
+workflows. Every installed package file hash and managed registration was checked.
+Original third-party notices remain included; the entire bundle is not relicensed as MIT.
 
-## Checks performed
-
-The first draft EXE was rejected before publication: its generic Inno exclusion
-`router\*` unintentionally removed four files from the skill's nested
-vendor/gamedev-skills/router folder. The integrity guard refused registration
-and the actual-EXE QA failed. The exclusion is now anchored at the payload root
-(`\router\*`, likewise for prerequisites), and the final compiled EXE passed
-the complete installed-file check. The rejected draft's checksum and missing
-paths are retained in results.json; it is not the released download.
+## Verification
 
 | Check | Observed result |
 | --- | --- |
-| Skill, packaging, setup, memory, session, branding and Android fixture regressions | 114 unique tests passed on host Python 3.12 and again on private Python 3.13 |
-| Full source package | 894 original Git blobs exported and verified; all installed SHA-256 hashes matched |
-| Actual update | 0.1.0 installed, then the exact 0.1.1 EXE installed over it |
-| Skill availability | Setup registered it; offline SKILL.md/support-file reads and catalog lookup passed |
-| Desktop DevFridge action | Selected the built-in registration; command dispatch mocked, no game/model call |
-| Data preservation | Synthetic config, key placeholder, session/context and custom skill remained byte-for-byte unchanged through update and removal |
-| Registration | Idempotent reopen; unit tests cover missing/altered files, path escape, foreign metadata and manual supersession |
-| Runtime | Doctor passed with system Python excluded from test PATH; private sys.prefix confirmed |
-| Python environments | Private Python created a venv and executed its interpreter |
-| Desktop | Native Qt app started and saved a screenshot using an explicit synthetic fixture |
-| Browser | Bundled Chromium navigated a local data page and verified its heading |
-| Web3 SDKs | 14 Node tests passed from the extracted installation using fake transports |
-| DevFridge helpers | 40 fixture tests passed on a temporary copy using bundled Node/Python, including icon generation, quality controls and subscription evidence |
-| Uninstall | Scratch installation removed; only managed skill metadata removed, synthetic user data retained |
-| External activity | No real signing key read, model call, wallet operation or real order requested by these tests |
+| Installed sources | 467 shipped file hashes matched the clean Git export/manifest |
+| Private runtime regressions | 386 distinct Python tests passed using the installed Python 3.13 runtime; external socket connections blocked, none attempted |
+| SDK regression tests | 14 Node tests passed using fake transports, no wallet or live RPC submission |
+| Actual upgrade | Exact 0.1.1 EXE installed, followed by exact 0.1.2 EXE |
+| Update preservation | Synthetic configuration, encrypted-key placeholder, session/context and custom skill remained byte-for-byte unchanged |
+| Fresh installation | Empty application profile, no configuration or credential generated; bundled skill registered automatically |
+| Host Python independence | System Python absent from the test PATH, private sys.prefix confirmed |
+| Python environments | Private Python created and executed a venv |
+| Desktop | Qt app rendered an explicit synthetic fixture |
+| Browser | Bundled Chromium verified a local data page |
+| Removal | Both scratch program installations removed; user fixtures preserved; only managed skill registration removed |
+| Configured user accounts | Real encrypted credential, settings and pairing hashes unchanged |
+| Financial activity | No real signing key read, model call, wallet operation or order requested by installer acceptance |
 
-Two runtime executions do not count as 228 unique cases. Unit tests and fake
-transports do not certify exchange execution or provider availability.
+Tests run on host and private Python are not counted as twice as many unique cases.
+Mock SDK tests do not certify live exchange execution or provider availability.
 
-## Other included components
+## Privacy
 
-Private CPython 3.13.17 with pip/venv, official unmodified FreeLLMAPI portable
-router v0.16.30, Tailscale 1.104.7 MSI, Node 22.23.5, PowerShell 7.7.0, MinGit
-2.56.1, Android platform-tools, Chromium 145/revision 1208, PySide6/Qt 6.10.1,
-the Web3 SDK dependencies, Visual C++ Redistributable and the existing Android
-APK. Component source URLs/checksums are in the locks and suite-manifest.json.
-The Inno compiler is build tooling, not installed application functionality.
-Third-party software retains its own notices; the complete suite is not MIT.
+Build inputs came from an exported tracked Git tree, not the personal development
+workspace. No runtime-home binding, environment secrets, wallet files, account
+database, chat history, vault or Remote pairing data was staged. The full audit
+scanned **45,574 distributable files** and
+3,260,796,940 bytes: no configured-state files,
+private identifier matches or private-key material were found.
+After that scan, one public requirements file was added and the two source
+manifests were refreshed. Those three files passed a separate delta audit; all
+other staged source hashes and dependencies were unchanged. See privacy-audit.json.
 
-## Limits and privacy
+The first candidate payload was rejected because an optional public PyCryptodome
+self-test contained an example private key. The complete optional Crypto/SelfTest
+directory was omitted; runtime cryptography and license notices remain. No rejected
+candidate was published. Raw QA logs, private scan values, real profile hashes and
+personal paths remain local. Public release reports contain aggregate/synthetic evidence.
 
-- Earlier attempts in a Documents-based scratch program directory failed with
-  Windows access denied (5) replacing requirements-audio.txt, including a retry
-  with the old 0.1.0 installer. The file was not read-only and Restart Manager
-  reported no holder; separate rename/delete probes succeeded. Final acceptance
-  used isolated LocalAppData Temp storage. The underlying Windows denial cause
-  was not established; the failed logs were retained locally. Custom protected
-  installation directories are not certified by the successful final run.
-- This was an isolated build-host installation with a private PATH, not a
-  genuinely clean Windows VM. No code-signing certificate was applied.
-- Tailscale install/login and provider onboarding were not repeated on the
-  live PC. The test excluded Tailscale and never started the bundled router.
-- The existing debug-signed Android 0.2.8 APK is unchanged, SHA-256
-  `5e3bca0156c6cb7ad70e4f3f6d8c93d0222982fa171acf8328c89cb7317a7941`.
-  No physical-phone installation or pairing was performed in this run.
-- No new game, Blender assets, Android game APK, live model conversation,
-  voice-model download or financial execution was tested for this release.
-- Android SDK/JDK and Blender are separate optional game-development tools;
-  bundling the skill does not supply them or guarantee game-build completion.
-- Existing bridges, wallets, keys, vault and conversations were not packaged
-  or replaced. All acceptance-test credentials/state were synthetic.
+The first compiled candidate was also rejected: the private Python lacked
+Tcl/Tk, and three resource tests ran from the wrong working directory. The final
+candidate includes matching official Tcl/Tk files and runs tests from the
+installed agent directory. The exact final EXE passed both installation modes.
 
-This is the user's complementary Web3 fork, not an upstream release or
-endorsement. Changes were pushed to web3-suite; no PR was opened.
+## Limits
+
+- Both installation modes ran on the build machine, not a genuinely clean VM.
+- Tailscale installation/login, provider onboarding and physical Android pairing
+  were not exercised during installer acceptance. These require the owner's own
+  account and interaction. The bundled MSI was verified, not reinstalled over the
+  owner's connected VPN.
+- The desktop fixture is synthetic. No funds or real model accounts were used.
+- The EXE is not code signed. Existing Android signing compatibility is unchanged.
+- No Windows startup task, trading service or financial authorization is created
+  automatically by Setup. Installation does not provide accounts or free-tier quotas.
+
+See USER_GUIDE.md, CHANGELOG.md, results.json, suite-manifest.json,
+source-files.json, bundled-skills.json and SHA256SUMS.txt.

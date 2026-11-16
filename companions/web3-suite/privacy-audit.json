@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "files_scanned": 45574,
+  "bytes_scanned": 3260796940,
+  "private_identifier_needles": 8,
+  "findings": [],
+  "scope": "Distributable files; source comes from tracked Git export. Public third-party licenses and synthetic tests remain included.",
+  "verified_delta_after_full_scan": {
+    "status": "PASS",
+    "files": [
+      "agent/requirements.txt",
+      "source-files.json",
+      "suite-manifest.json"
+    ],
+    "sha256": {
+      "agent/requirements.txt": "199263e68d5198dd0137481c852ea460a0d308769d5fc9f5691a95512778f5e0",
+      "source-files.json": "640430ae2ab0c1f205d36392a19bee9db10d61a863f592708740527c88f46872",
+      "suite-manifest.json": "d16abd0a749733d9e78a2b65b3efc8df1a6265d195893f1355aebe5285a69967"
+    },
+    "new_source_commit": "6b6c8a91bd63bad8e22f53f1f608008412e10b7c",
+    "reason": "One public base requirements file added; remaining staged first-party sources hash-matched to the new tracked export and dependencies were unchanged."
+  }
+}

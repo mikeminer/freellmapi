@@ -19,8 +19,9 @@ bounded format correction. Percentage sizing is calculated natively from verifie
 available capital and asset precision, with one persisted margin/notional choice.
 Physical Seeker acceptance used real Gemini and Agnes responses: ETH, 25x, 50%,
 visible confirmation/refresh/cancel buttons, and cancellation without orders.
-304 regression tests passed. This covers those two reported models and the
-proposal workflow, not all models or live execution. The new installer also verifies the hashes of
+386 distinct installed-runtime regression tests passed. The earlier real-model
+acceptance covers the two reported models and the proposal workflow, not all
+models or live execution. The new installer also verifies the hashes of
 its installed source files; see the release build report for installer acceptance.
 
 [English user guide](packaging/windows/USER_GUIDE.md) · [Build and verification](packaging/windows/README.md)
@@ -29,7 +30,7 @@ Uses the unmodified official FreeLLMAPI router. This fork is a complementary Web
 
 ![Desktop installation smoke test](docs/desktop-preview.png)
 
-The screenshot uses a synthetic UI fixture from the installed private runtime;
+The screenshot uses a synthetic UI fixture from the bundled private runtime;
 it does not depict a live model response or trading operation.
 
 [Installer acceptance report](BUILD_REPORT.md) · [Structured results](results.json)
