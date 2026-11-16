@@ -15,6 +15,8 @@
   clean Git export. Add private-state/identifier scanning before publication.
 - Omit optional public PyCryptodome self-tests containing example private keys;
   keep the runtime cryptography and license notices intact.
+- Include official Tcl/Tk and tkinter for local wallet panels. Preflight/doctor
+  verify private Tcl paths, and installed tests run from their source directory.
 - Preserve the private Python runtime, official router, Tailscale prerequisite,
   complete 894-file DevFridge Game Builder package and existing Android APK.
 

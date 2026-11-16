@@ -83,6 +83,9 @@ class WindowsInstallerTests(unittest.TestCase):
     def test_missing_latest_allocation_module_cannot_be_released(self):
         (self.payload/'agent/financial_allocation.py').unlink()
         with self.assertRaisesRegex(ValueError,'Payload incompleto'):build.validate_payload(self.payload,probe=False)
+    def test_missing_tkinter_cannot_pass_preflight(self):
+        (self.payload/'runtime/python/DLLs/_tkinter.pyd').unlink()
+        with self.assertRaisesRegex(ValueError,'Payload incompleto'):build.validate_payload(self.payload,probe=False)
     def test_changed_source_after_manifest_cannot_be_released(self):
         (self.payload/'agent/financial_allocation.py').write_text('stale or changed source')
         with self.assertRaisesRegex(ValueError,'Sorgente release'):build.validate_payload(self.payload,probe=False)

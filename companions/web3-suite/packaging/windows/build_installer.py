@@ -18,8 +18,12 @@ ROOT = HERE.parents[1]
 ICON = ROOT/'desktop/freellmapi-official.ico'
 REQUIRED = ('runtime/python/python.exe', 'runtime/python/pythonw.exe',
             'runtime/python/python313.dll', 'agent/desktop_app.py',
+            'runtime/python/Lib/tkinter/__init__.py','runtime/python/DLLs/_tkinter.pyd',
+            'runtime/python/DLLs/tcl86t.dll','runtime/python/DLLs/tk86t.dll',
+            'runtime/python/tcl/tcl8.6/init.tcl','runtime/python/tcl/tk8.6/tk.tcl',
             'agent/runtime_bootstrap.py', 'agent/freellmapi.py',
             'agent/financial_focus.py','agent/financial_allocation.py','agent/trade_proposal.py',
+            'agent/requirements.txt',
             'suite-manifest.json','source-files.json',
             'agent/desktop/index.html', 'agent/desktop/freellmapi-official.ico')
 
@@ -73,7 +77,8 @@ def validate_payload(payload, *, probe=True):
                 "assert pathlib.Path(sys.prefix).resolve()==pathlib.Path(sys.argv[1]).resolve(), 'Python esterno'; "
                 "sys.path.insert(0,sys.argv[2]); "
                 "sys.path.insert(0,sys.argv[3]); import suite; suite.configure(pathlib.Path(sys.argv[3]).parent); "
-                "import freellmapi, desktop_backend, win32api; "
+                "import freellmapi, desktop_backend, win32api, tkinter, hyperliquid_panel, solana_panel; "
+                "t=tkinter.Tcl(); assert pathlib.Path(t.eval('info library')).resolve().is_relative_to(pathlib.Path(sys.argv[1]).resolve()), 'Tcl esterno'; "
                 "from PySide6 import QtWebEngineWidgets; print('private-runtime-ok')")
         with tempfile.TemporaryDirectory(prefix='freellmapi-build-probe-') as temporary:
             env=dict(os.environ,FREELLMAPI_HOME=str(Path(temporary)/'home'),APPDATA=str(Path(temporary)/'appdata'),FREELLMAPI_READ_ONLY='1',PYTHONDONTWRITEBYTECODE='1')

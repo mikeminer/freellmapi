@@ -20,6 +20,7 @@ def extract(archive,destination,strip=False):
 def source_files(root=ROOT):
     for p in root.glob('*.py'):
         if not p.name.startswith('verify_'):yield p
+    if (root/'requirements.txt').is_file():yield root/'requirements.txt'
     ignored={'node_modules','__pycache__','vendor','models','build','.venv'}
     for folder in ('desktop','integrations','examples','mobile','packaging'):
         for current,dirs,files in os.walk(root/folder):

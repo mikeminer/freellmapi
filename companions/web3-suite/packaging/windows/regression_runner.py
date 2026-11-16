@@ -7,6 +7,7 @@ MODULES='test_bundled_skills test_windows_installer test_payload_privacy test_su
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--suite-root',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
     sys.path.insert(0,str(a.suite_root/'launcher'));import suite;suite.configure(a.suite_root)
+    os.chdir(a.suite_root/'agent') # Existing source-resource tests use relative paths.
     fixture_root=a.output.parent/'regression-fixtures';fixture_root.mkdir(exist_ok=True)
     os.environ['FREELLMAPI_HOME']=str(fixture_root/'home');os.environ['APPDATA']=str(fixture_root/'appdata')
     # Unit fixture catalogs must be empty. The real installed 894-file bundle

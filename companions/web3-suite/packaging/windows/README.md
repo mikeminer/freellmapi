@@ -42,7 +42,11 @@ python packaging/windows/build_installer.py --payload dist/payload-0.1.2 --versi
 ```
 
 The component lock pins official URLs and SHA-256 digests. CPython's NuGet
-package supplies a complete private runtime with pip and venv. Wheels are
+package supplies the private core with pip and venv. The matching official
+Windows managed archive supplies Tcl/Tk, its DLLs, tkinter and license files;
+NuGet alone does not contain Tk. The archive checksum is pinned from Python's
+[official Windows manifest](https://www.python.org/ftp/python/3.13.17/windows-3.13.17.json).
+Preflight and doctor verify that Tcl resolves inside the private runtime. Wheels are
 installed from requirements-suite.lock, not copied from the host environment.
 Browser downloads keep TLS validation enabled and use Windows trusted CAs.
 SDK install scripts do not run. The Pump SDK's official CommonJS exports avoid

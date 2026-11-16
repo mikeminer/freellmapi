@@ -10,6 +10,9 @@ def configure(root):
     os.environ['PLAYWRIGHT_BROWSERS_PATH']=str(root/'runtime/browsers')
     os.environ['FREELLMAPI_BROWSER_CHANNEL']='chromium'
     os.environ['FREELLMAPI_SUITE_ROOT']=str(root)
+    for name,folder in (('TCL_LIBRARY','tcl8.6'),('TK_LIBRARY','tk8.6')):
+        location=root/'runtime/python/tcl'/folder
+        if location.is_dir():os.environ[name]=str(location)
     os.environ.setdefault('NODE_USE_SYSTEM_CA','1')
     sys.path.insert(0,str(root/'agent'))
     site=root/'runtime/python/Lib/site-packages'
@@ -35,8 +38,11 @@ def main():
         print(json.dumps(value));return 0
     if args.mode=='doctor':
         import importlib
-        for name in ('freellmapi','desktop_backend','PySide6.QtWebEngineWidgets','win32api','solders','faster_whisper'):
+        for name in ('freellmapi','desktop_backend','hyperliquid_panel','solana_panel','tkinter','PySide6.QtWebEngineWidgets','win32api','solders','faster_whisper'):
             importlib.import_module(name)
+        import tkinter
+        tcl=tkinter.Tcl();tcl_path=Path(tcl.eval('info library')).resolve()
+        assert tcl_path.is_relative_to(root/'runtime/python'),'External Tcl library'
         versions=json.loads((root/'suite-manifest.json').read_text(encoding='utf-8'))['components']
         from bundled_skills import validate
         import tempfile
@@ -50,7 +56,7 @@ def main():
         print(json.dumps({'ok':True,'python':sys.version.split()[0],'private_prefix':str(Path(sys.prefix).resolve())==str(root/'runtime/python'),
                           'components':{k:v['version'] for k,v in versions.items()},
                           'bundled_skills':[{'id':p['id'],'version':p['version'],'files':len(p['files'])} for p in bundle['packages']],
-                          'bundled_registration_verified':bool(registered),'scope':'offline imports, skill integrity and temporary registry; no model, wallet or trading call'}))
+                          'bundled_registration_verified':bool(registered),'private_tcltk_verified':True,'tcl_version':tcl.eval('info patchlevel'),'scope':'offline imports, skill integrity and temporary registry; no model, wallet or trading call'}))
         return 0
     if args.mode=='router':
         subprocess.Popen([str(root/'router/FreeLLMAPI.exe')],cwd=root/'router')

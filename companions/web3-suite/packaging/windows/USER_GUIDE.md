@@ -28,7 +28,7 @@ the old code until restarted. No account configuration is bundled.
 
 ## What is included
 
-The Windows x64 installer includes a private Python runtime and its libraries,
+The Windows x64 installer includes a private Python runtime with Qt and Tcl/Tk and its libraries,
 CMD and desktop clients, the official router distribution, Tailscale's Windows
 MSI, the Android APK, Node.js, PowerShell, MinGit, Android platform tools and
 the Web3 integration source. The build manifest records versions and SHA-256

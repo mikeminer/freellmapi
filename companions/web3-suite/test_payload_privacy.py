@@ -1,4 +1,4 @@
-import importlib.util,tempfile,unittest
+import hashlib,importlib.util,tempfile,unittest,zipfile
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('payload_audit',Path(__file__).parent/'packaging/windows/audit_payload.py')
 audit=importlib.util.module_from_spec(spec);spec.loader.exec_module(audit)
@@ -29,5 +29,17 @@ class PayloadPrivacyTests(unittest.TestCase):
             library=tests.parent/'Cipher';library.mkdir();(library/'__init__.py').write_text('Runtime library')
             runtime.prune_nonruntime_fixtures(root)
             self.assertFalse(tests.exists());self.assertTrue((library/'__init__.py').exists())
+    def test_tcltk_subset_requires_matching_archive_hash_and_keeps_only_runtime_subset(self):
+        spec=importlib.util.spec_from_file_location('prepare_tcltk_runtime',Path(__file__).parent/'packaging/windows/prepare_runtime.py')
+        runtime=importlib.util.module_from_spec(spec);spec.loader.exec_module(runtime)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);archive=root/'official-fixture.zip';dest=root/'runtime';dest.mkdir()
+            with zipfile.ZipFile(archive,'w') as z:
+                z.writestr('Lib/tkinter/__init__.py','fixture');z.writestr('DLLs/_tkinter.pyd','fixture')
+                z.writestr('tcl/tcl8.6/init.tcl','fixture');z.writestr('python.exe','must not replace core interpreter')
+            with self.assertRaisesRegex(ValueError,'checksum'):runtime.stage_tcltk(dest,archive,'0'*64)
+            self.assertEqual(list(dest.iterdir()),[])
+            self.assertEqual(runtime.stage_tcltk(dest,archive,hashlib.sha256(archive.read_bytes()).hexdigest()),3)
+            self.assertFalse((dest/'python.exe').exists());self.assertTrue((dest/'tcl/tcl8.6/init.tcl').is_file())
 
 if __name__=='__main__':unittest.main()
